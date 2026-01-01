@@ -1,48 +1,126 @@
-# TETSUO Wallet SDK
+# TETSUO Blockchain Wallet SDK
 
-A comprehensive TypeScript SDK for creating and managing TETSUO blockchain wallets. This package provides tools for wallet generation, transaction building, signing, and blockchain interaction.
+[![npm version](https://img.shields.io/npm/v/tetsuo-blockchain-wallet.svg)](https://www.npmjs.com/package/tetsuo-blockchain-wallet)
+[![npm downloads](https://img.shields.io/npm/dm/tetsuo-blockchain-wallet.svg)](https://www.npmjs.com/package/tetsuo-blockchain-wallet)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub](https://img.shields.io/badge/GitHub-tetsuonpmwallet-blue.svg)](https://github.com/Pavelevich/tetsuonpmwallet)
+
+A **production-ready** TypeScript SDK for building and managing TETSUO blockchain wallets. Provides secure wallet generation, transaction signing, and blockchain interaction with client-side signing for maximum security.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [CLI Usage](#cli-usage)
+- [API Reference](#api-reference)
+- [Security](#security)
+- [Examples](#examples)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
-✅ **Wallet Management**
-- Generate wallets with BIP39 mnemonics
-- Import wallets from existing mnemonics or private keys
-- Secure key derivation using PBKDF2
-- Public key and address generation
+### 🔐 Wallet Management
+- **BIP39 Mnemonics**: Generate 12-word recovery phrases for wallet backup
+- **Multiple Import Methods**: Import from mnemonics or private keys
+- **Secure Key Derivation**: Secp256k1 elliptic curve cryptography
+- **Local Wallet Storage**: Encrypted wallet data at `~/.tetsuo/wallets.json`
 
-✅ **Transaction Operations**
-- Build unsigned transactions
-- Select UTXOs automatically
-- Calculate fees dynamically
-- Create transaction hex payloads
+### 💱 Transaction Operations
+- **Client-Side Signing**: All transactions signed locally (never share private keys)
+- **Automatic UTXO Selection**: Smart coin selection algorithm
+- **Dynamic Fee Calculation**: Accurate fee estimation based on network
+- **Transaction Building**: Complete transaction hex generation
 
-✅ **Address Management**
-- Generate TETSUO addresses from public keys
-- Validate address format and checksums
-- Extract address information
+### 📍 Address Management
+- **TETSUO Address Generation**: From public keys with proper checksums
+- **Address Validation**: Format and checksum verification
+- **Hash160 Support**: Extract address information
 
-✅ **Blockchain Interaction**
-- RPC client for network communication
-- Get balance and transaction history
-- Fetch UTXOs for address
-- Broadcast signed transactions
-- Estimate network fees
+### 🌐 Blockchain Interaction
+- **RPC Client**: Full-featured network communication
+- **Balance Queries**: Get balance in TETSUO
+- **UTXO Fetching**: For transaction input selection
+- **Transaction Broadcasting**: Publish signed transactions
+- **Fee Estimation**: Network-based fee calculation
 
-✅ **Cryptography**
-- SHA256 and RIPEMD160 hashing
-- Base58 and Base58Check encoding
-- ECDSA signing with secp256k1
-- Random key generation
+### 🔒 Cryptography
+- **SHA256 & RIPEMD160**: Standard blockchain hashing
+- **Base58Check Encoding**: Bitcoin-compatible address encoding
+- **ECDSA Signing**: Secp256k1 signature generation
+- **Secure Random**: Cryptographically secure key generation
 
 ## Installation
+
+```bash
+npm install -g tetsuo-blockchain-wallet
+```
+
+Or for programmatic use:
 
 ```bash
 npm install tetsuo-blockchain-wallet
 ```
 
+## Quick Start
+
+### Interactive CLI (Easiest)
+
+```bash
+tetsuo
+```
+
+Then use commands like:
+```
+/create-wallet    - Create new wallet
+/balance          - Check balance
+/send             - Send TETSUO tokens
+/list-wallets     - View all wallets
+/exit             - Exit program
+```
+
+### Programmatic API
+
+```typescript
+import {
+  generateWallet,
+  createRPCClient,
+  buildTransaction,
+  signTransaction,
+  createTransactionHex
+} from 'tetsuo-blockchain-wallet';
+
+// Create wallet
+const wallet = await generateWallet();
+console.log('Address:', wallet.address);
+console.log('Backup mnemonic:', wallet.mnemonic);
+
+// Get balance
+const rpc = createRPCClient('https://tetsuoarena.com');
+const balance = await rpc.getBalance(wallet.address);
+console.log('Balance:', balance, 'TETSUO');
+
+// Send transaction
+const utxos = await rpc.getUTXOs(wallet.address);
+const { inputs, outputs } = buildTransaction(
+  wallet.address,
+  'T1234567890abcdefghijklmnopqrstuvwxyz',
+  1.5, // 1.5 TETSUO
+  utxos,
+  wallet.address
+);
+
+const txHex = createTransactionHex(inputs, outputs);
+const signedTx = signTransaction(txHex, wallet.privateKey, inputs, utxos);
+const txid = await rpc.broadcastTransaction(signedTx);
+console.log('Sent! TXID:', txid);
+```
+
 ## CLI Usage
 
-The package includes an interactive CLI tool for managing wallets:
+### Start the CLI
 
 ```bash
 tetsuo
@@ -50,374 +128,321 @@ tetsuo
 
 ### Available Commands
 
-```
-/create-wallet    - Create a new wallet with BIP39 mnemonic
-/import-wallet    - Import wallet from mnemonic or private key
-/list-wallets     - Display all stored wallets
-/select-wallet    - Select active wallet for operations
-/balance          - Check wallet balance
-/transactions     - View transaction history
-/receive          - Display receiving address
-/send             - Send TETSUO to another address
-/wallet-data      - View detailed wallet information
-/delete-wallet    - Delete a wallet
-/exit             - Exit the CLI
-```
+| Command | Description |
+|---------|-------------|
+| `/create-wallet` | Create new wallet with BIP39 mnemonic |
+| `/import-wallet` | Import from existing mnemonic or private key |
+| `/list-wallets` | Display all stored wallets |
+| `/select-wallet` | Choose active wallet for operations |
+| `/balance` | Check current wallet balance |
+| `/transactions` | View transaction history |
+| `/receive` | Display receiving address |
+| `/send` | Send TETSUO to another address |
+| `/wallet-data` | View detailed wallet information |
+| `/delete-wallet` | Remove wallet from storage |
+| `/config` | Configure RPC endpoint |
+| `/exit` | Quit the CLI |
 
-### Example CLI Workflow
+### Example Workflow
 
 ```bash
-# Start the CLI
 $ tetsuo
 
-# Create a new wallet
-Command: /create-wallet
-Wallet name: my-wallet
-⏳ Generating wallet...
-✓ Wallet created successfully!
-📝 Mnemonic (BACKUP THIS):
-word1 word2 word3 ... word12
-📍 Address:
-T1234567890abcdefghijklmnopqrstuvwxyz
+[...] Generating wallet...
+[OK] Wallet created successfully!
+[NOTE] Mnemonic (BACKUP THIS):
+word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12
 
-# Check balance
-Command: /balance
-⏳ Fetching balance...
-💰 Balance:
-5.50000000 TETSUO
+[ADDR] Address:
+TAbcdefghijklmnopqrstuvwxyz1234567890
 
-# View transactions
-Command: /transactions
-📋 Transaction History:
-─────────────────────────────────────────────────────────────────────────────
-↓ RECEIVE | 5.50 TETSUO | 2024-01-01T12:00:00Z
-↑ SEND   | 2.00 TETSUO | 2023-12-31T10:30:00Z
-─────────────────────────────────────────────────────────────────────────────
+$ /balance
+[...] Fetching balance...
+[BALANCE] Balance Information:
+──────────────────────────────────────────────────
+  Wallet:  my-wallet
+  Address: TAbcdefghijklmnopqrstuvwxyz1234567890
+  Balance: 10.50000000 TETSUO
+──────────────────────────────────────────────────
 
-# Show receive address
-Command: /receive
-📍 Receive Address:
-T1234567890abcdefghijklmnopqrstuvwxyz
-Share this address to receive TETSUO
+$ /send
+Recipient address: T1111111111111111111111111111111111111111
+Amount (TETSUO): 5
+
+[...] Preparing transaction...
+[HISTORY] Transaction Details:
+────────────────────────────────────────────────────────────
+  From:     TAbcdefghijklmnopqrstuvwxyz1234567890
+  To:       T1111111111111111111111111111111111111111
+  Amount:   5.00000000 TETSUO
+  Fee:      0.00025000 TETSUO
+  Total:    5.00025000 TETSUO
+────────────────────────────────────────────────────────────
+
+Confirm transaction? (yes/no): yes
+
+[...] Signing transaction...
+[OK] Transaction sent successfully!
+
+[INFO] Transaction Info:
+TXID: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6...
 ```
 
-### Environment Variables
+### Configuration
 
 ```bash
-# Set custom RPC endpoint (default: http://localhost:8080)
-export TETSUO_RPC_URL=http://your-rpc-server:8080
+# Custom RPC endpoint
+export TETSUO_RPC_URL=https://your-rpc-server.com
 tetsuo
+
+# Default RPC (if not set)
+# https://tetsuoarena.com
 ```
 
 ### Wallet Storage
 
-Wallets are stored locally in:
+Wallets are stored locally at:
 ```
 ~/.tetsuo/wallets.json
 ```
 
-Each wallet stores:
-- Name
-- Address
-- Public Key
-- Private Key (encrypted recommended for production)
-- Mnemonic (if available)
+Each wallet contains:
+- Name (user-defined)
+- Address (TETSUO blockchain address)
+- Public Key (compressed format)
+- Private Key (hex format, handle with care!)
+- Mnemonic (if wallet was generated)
 - Creation timestamp
 
-## Quick Start
+## API Reference
 
-### Programmatic API
+### Wallet Functions
 
-### Generate a New Wallet
+#### `generateWallet(): Promise<Wallet>`
+Generate new wallet with random BIP39 mnemonic.
+
+```typescript
+const wallet = await generateWallet();
+// {
+//   mnemonic: "word1 word2 ... word12",
+//   privateKey: "abcd1234...",
+//   publicKey: "02abcd1234...",
+//   address: "TAbcdef..."
+// }
+```
+
+#### `importFromMnemonic(mnemonic: string): Promise<Wallet>`
+Import wallet from 12-word BIP39 mnemonic.
+
+```typescript
+const wallet = await importFromMnemonic(
+  'word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12'
+);
+```
+
+#### `importFromPrivateKey(privateKey: string): Wallet`
+Import wallet from 64-character hex private key.
+
+```typescript
+const wallet = importFromPrivateKey('abcd1234...0000');
+```
+
+#### `isValidMnemonic(mnemonic: string): boolean`
+Validate BIP39 mnemonic phrase.
+
+#### `derivePublicKey(privateKey: string): string`
+Derive compressed public key from private key.
+
+### Address Functions
+
+#### `isValidAddress(address: string): boolean`
+Check if TETSUO address format is valid.
+
+#### `validateAddress(address: string): string`
+Validate address or throw error.
+
+#### `generateAddress(publicKey: string): string`
+Generate TETSUO address from public key.
+
+### Transaction Functions
+
+#### `buildTransaction(fromAddr, toAddr, amount, utxos, changeAddr): TransactionData`
+Build unsigned transaction with automatic UTXO selection.
+
+```typescript
+const txData = buildTransaction(
+  'TFrom...',
+  'TTo...',
+  1.5,        // TETSUO amount
+  utxos,
+  'TChangeAddr...'
+);
+// Returns: { inputs, outputs, fee }
+```
+
+#### `createTransactionHex(inputs, outputs): string`
+Create transaction hex from inputs and outputs.
+
+#### `signTransaction(txHex, privateKey, inputs, utxos): string`
+Sign transaction with private key. Returns signed transaction hex.
+
+#### `estimateFee(inputCount, outputCount): number`
+Estimate transaction fee in satoshis.
+
+### RPC Client
+
+#### `createRPCClient(url?: string): RPC`
+Create RPC client instance.
+
+```typescript
+const rpc = createRPCClient('https://tetsuoarena.com');
+```
+
+#### `rpc.getBalance(address: string): Promise<number>`
+Get balance in TETSUO.
+
+#### `rpc.getUTXOs(address: string): Promise<UTXO[]>`
+Get unspent transaction outputs for address.
+
+#### `rpc.getTransactionHistory(address: string): Promise<Transaction[]>`
+Get transaction history for address.
+
+#### `rpc.broadcastTransaction(txHex: string): Promise<string>`
+Broadcast signed transaction. Returns TXID.
+
+#### `rpc.ping(): Promise<boolean>`
+Health check for RPC endpoint.
+
+## Security
+
+### 🔒 Critical Security Guidelines
+
+**Private Keys**
+- Never expose private keys
+- Never share mnemonics
+- Back up mnemonics offline only
+- Consider using hardware wallets for large amounts
+
+**Network Security**
+- Always use HTTPS for RPC endpoints in production
+- Verify RPC endpoint authenticity
+- Use verified blockchain explorers
+- Never paste private keys into unsecured apps
+
+**Client-Side Signing**
+- This SDK signs transactions **on your device only**
+- Private keys never leave your computer
+- Broadcast-only servers can't steal funds
+- Always verify transaction details before confirming
+
+**Best Practices**
+```typescript
+// ✓ GOOD: Small test transaction first
+const testTx = buildTransaction(from, to, 0.01, utxos, from);
+
+// ✓ GOOD: Verify amounts before signing
+console.log('Sending:', amount, 'to:', toAddress);
+
+// ✗ BAD: Never log private keys
+console.log(wallet.privateKey); // DON'T DO THIS
+
+// ✗ BAD: Never send to unverified addresses
+const address = userInput; // Verify first!
+```
+
+## Examples
+
+### Example 1: Create and Export Wallet
 
 ```typescript
 import { generateWallet } from 'tetsuo-blockchain-wallet';
 
 const wallet = await generateWallet();
 
-console.log('Mnemonic:', wallet.mnemonic);
-console.log('Address:', wallet.address);
-console.log('Private Key:', wallet.privateKey);
+console.log('📝 SAVE THIS MNEMONIC SECURELY:');
+console.log(wallet.mnemonic);
+
+console.log('Your Address:', wallet.address);
+console.log('Share this address to receive TETSUO');
 ```
 
-### Import Wallet from Mnemonic
-
-```typescript
-import { importFromMnemonic } from 'tetsuo-blockchain-wallet';
-
-const mnemonic = 'word1 word2 word3 ... word12';
-const wallet = await importFromMnemonic(mnemonic);
-
-console.log('Address:', wallet.address);
-```
-
-### Import Wallet from Private Key
-
-```typescript
-import { importFromPrivateKey } from 'tetsuo-blockchain-wallet';
-
-const privateKey = '0000000000000000000000000000000000000000000000000000000000000001';
-const wallet = importFromPrivateKey(privateKey);
-
-console.log('Address:', wallet.address);
-```
-
-### Get Balance
+### Example 2: Check Balance
 
 ```typescript
 import { createRPCClient } from 'tetsuo-blockchain-wallet';
 
-const rpc = createRPCClient('http://localhost:8080');
+const rpc = createRPCClient('https://tetsuoarena.com');
 const balance = await rpc.getBalance('TYourAddressHere');
-
-console.log('Balance (TETSUO):', balance);
+console.log(`Balance: ${balance} TETSUO`);
 ```
 
-### Build and Sign Transaction
+### Example 3: Send Transaction
 
 ```typescript
 import {
+  createRPCClient,
   buildTransaction,
   createTransactionHex,
   signTransaction,
-  createRPCClient
+  importFromMnemonic
 } from 'tetsuo-blockchain-wallet';
 
-const rpc = createRPCClient('http://localhost:8080');
+// Import wallet
+const mnemonic = 'word1 word2 ... word12';
+const wallet = await importFromMnemonic(mnemonic);
+
+// Setup
+const rpc = createRPCClient('https://tetsuoarena.com');
+const recipientAddress = 'TRecipientAddressHere';
+const amountTetsuo = 2.5;
 
 // Get UTXOs
-const utxos = await rpc.getUTXOs(fromAddress);
+const utxos = await rpc.getUTXOs(wallet.address);
 
 // Build transaction
 const { inputs, outputs, fee } = buildTransaction(
-  fromAddress,
-  toAddress,
-  0.5, // 0.5 TETSUO
+  wallet.address,
+  recipientAddress,
+  amountTetsuo,
   utxos,
-  changeAddress
+  wallet.address // change address
 );
 
-// Create transaction hex
-const unsignedTx = createTransactionHex(inputs, outputs);
+// Sign and broadcast
+const txHex = createTransactionHex(inputs, outputs);
+const signedTx = signTransaction(txHex, wallet.privateKey, inputs, utxos);
+const txid = await rpc.broadcastTransaction(signedTx);
 
-// Sign transaction
-const signature = signTransaction(unsignedTx, privateKey, inputs);
-
-// Broadcast
-const txid = await rpc.broadcastTransaction(signature);
-console.log('Transaction sent:', txid);
+console.log(`✓ Transaction sent!`);
+console.log(`TXID: ${txid}`);
+console.log(`Explorer: https://tetsuoarena.com/tx/${txid}`);
 ```
 
-### Validate Address
-
-```typescript
-import { isValidAddress, validateAddress } from 'tetsuo-blockchain-wallet';
-
-const address = 'TYourAddressHere';
-
-// Check if valid
-if (isValidAddress(address)) {
-  console.log('Valid address');
-}
-
-// Or throw error if invalid
-try {
-  validateAddress(address);
-} catch (error) {
-  console.error('Invalid address');
-}
-```
-
-## API Reference
-
-### Wallet Functions
-
-#### `generateWallet(): Promise<GeneratedWallet>`
-Generate a new wallet with a random mnemonic.
-
-**Returns:**
-```typescript
-{
-  mnemonic: string;        // 12-word BIP39 phrase
-  privateKey: string;      // 64-char hex string
-  publicKey: string;       // Compressed public key
-  address: string;         // TETSUO address
-}
-```
-
-#### `importFromMnemonic(mnemonic: string): Promise<GeneratedWallet>`
-Import wallet from existing mnemonic phrase.
-
-**Throws:** `WalletError` if mnemonic is invalid.
-
-#### `importFromPrivateKey(privateKeyHex: string): ImportedWallet`
-Import wallet from private key.
-
-**Parameters:**
-- `privateKeyHex`: 64-character hex string (32 bytes)
-
-**Throws:** `WalletError` if private key is invalid.
-
-#### `derivePublicKey(privateKeyHex: string): string`
-Derive public key from private key.
-
-#### `isValidMnemonic(mnemonic: string): boolean`
-Validate a BIP39 mnemonic phrase.
-
-### Address Functions
-
-#### `generateAddress(publicKeyHex: string): string`
-Generate TETSUO address from public key.
-
-#### `isValidAddress(address: string): boolean`
-Check if address format is valid.
-
-#### `validateAddress(address: string): string`
-Validate address and throw error if invalid.
-
-**Throws:** `InvalidAddressError` if address is invalid.
-
-#### `addressToHash160(address: string): Buffer`
-Extract HASH160 from address.
-
-### Transaction Functions
-
-#### `buildTransaction(fromAddress, toAddress, amount, utxos, changeAddress): TransactionData`
-Build unsigned transaction.
-
-**Parameters:**
-- `fromAddress`: Sender's TETSUO address
-- `toAddress`: Recipient's TETSUO address
-- `amount`: Amount in TETSUO (decimal)
-- `utxos`: Array of available UTXOs
-- `changeAddress`: Address for change output
-
-**Returns:**
-```typescript
-{
-  inputs: TransactionInput[];
-  outputs: TransactionOutput[];
-  fee: number; // in satoshis
-}
-```
-
-**Throws:** `InsufficientFundsError` if not enough balance.
-
-#### `createTransactionHex(inputs, outputs): string`
-Create transaction hex from inputs and outputs.
-
-#### `signTransaction(txHex, privateKey, inputs): string`
-Sign transaction and return signed hex.
-
-#### `estimateFee(inputCount, outputCount): number`
-Estimate transaction fee (in satoshis).
-
-#### `estimateTransactionSize(inputCount, outputCount): number`
-Estimate transaction size (in bytes).
-
-### RPC Client
-
-#### `createRPCClient(networkUrl?: string): TetsuoRPC`
-Create RPC client instance.
-
-**Parameters:**
-- `networkUrl`: Optional, defaults to `http://localhost:8080`
-
-#### `rpc.getBalance(address: string): Promise<number>`
-Get balance in TETSUO.
-
-#### `rpc.getDetailedBalance(address: string): Promise<Balance>`
-Get balance with confirmed/unconfirmed breakdown.
-
-#### `rpc.getUTXOs(address: string): Promise<UTXO[]>`
-Get list of unspent transaction outputs.
-
-#### `rpc.getTransactionHistory(address: string): Promise<Transaction[]>`
-Get transaction history for address.
-
-#### `rpc.broadcastTransaction(transactionHex: string): Promise<string>`
-Broadcast signed transaction. Returns transaction ID.
-
-#### `rpc.getBlockchainInfo(): Promise<BlockchainInfo>`
-Get blockchain information.
-
-#### `rpc.estimateFee(inputCount, outputCount): Promise<number>`
-Estimate network fee.
-
-#### `rpc.validateAddress(address: string): Promise<boolean>`
-Check if address is valid on network.
-
-#### `rpc.ping(): Promise<boolean>`
-Health check for RPC endpoint.
-
-### Crypto Functions
-
-#### `sha256(data: string | Buffer): Buffer`
-Compute SHA256 hash.
-
-#### `doubleSha256(data: string | Buffer): Buffer`
-Compute double SHA256 (SHA256(SHA256(data))).
-
-#### `ripemd160(data: Buffer): Buffer`
-Compute RIPEMD160 hash.
-
-#### `hash160(data: Buffer): Buffer`
-Compute HASH160 (RIPEMD160(SHA256(data))).
-
-#### `toHex(data: Buffer | string): string`
-Convert buffer or string to hex.
-
-#### `fromHex(hex: string): Buffer`
-Convert hex string to buffer.
-
-#### `toBase58(buffer: Buffer): string`
-Encode buffer to base58.
-
-#### `fromBase58(str: string): Buffer`
-Decode base58 string to buffer.
-
-#### `base58check(data: Buffer): string`
-Encode with base58check (base58 + checksum).
-
-#### `base58checkDecode(encoded: string): Buffer`
-Decode base58check string.
-
-## Error Handling
-
-The SDK provides custom error classes:
+### Example 4: Error Handling
 
 ```typescript
 import {
-  WalletError,
   InvalidAddressError,
   InsufficientFundsError,
-  RPCError
+  RPCError,
+  WalletError
 } from 'tetsuo-blockchain-wallet';
 
 try {
-  // ... wallet operations
+  const wallet = await generateWallet();
+  // ... transaction logic
 } catch (error) {
   if (error instanceof InvalidAddressError) {
-    console.error('Invalid address format');
+    console.error('Invalid recipient address');
   } else if (error instanceof InsufficientFundsError) {
-    console.error('Not enough balance to send transaction');
+    console.error('Not enough balance');
   } else if (error instanceof RPCError) {
     console.error('Network error:', error.message);
   } else if (error instanceof WalletError) {
-    console.error('Wallet operation failed:', error.message);
+    console.error('Wallet error:', error.message);
   }
 }
 ```
-
-## Security Considerations
-
-⚠️ **Important Security Notes:**
-
-1. **Private Keys**: Never share your private keys. They are equivalent to your money.
-2. **Mnemonics**: Backup your mnemonic phrase offline. Whoever has your mnemonic can access all funds.
-3. **Network**: Always use HTTPS for RPC connections in production.
-4. **Validation**: Always validate addresses before sending transactions.
-5. **Testing**: Test with small amounts first before sending large transactions.
 
 ## Development
 
@@ -427,11 +452,15 @@ try {
 npm run build
 ```
 
-### Run Tests
+Compiles TypeScript to JavaScript in `dist/` directory.
+
+### Tests
 
 ```bash
 npm test
 ```
+
+Run full test suite with Jest.
 
 ### Watch Mode
 
@@ -439,28 +468,61 @@ npm test
 npm run dev
 ```
 
+Auto-recompile TypeScript on file changes.
+
+### Clean
+
+```bash
+npm run clean
+```
+
+Remove compiled files and coverage reports.
+
+## Recent Updates
+
+### Version 1.2.4 ✨
+- **Fixed critical endianness bug** in transaction encoding (vout, sequence fields)
+- **Removed emojis** from CLI for professional interface
+- **Added ASCII art header** to wallet CLI
+- Improved terminal output clarity
+
+### Version 1.2.3
+- Client-side signing fully functional
+- TETSUO-specific transaction format fixes (sequence 0xffffffff, SIGHASH_ALL)
+
+### Version 1.2.2
+- Secp256k1 key derivation improvements
+- Legacy HMAC wallet support (deprecated)
+
 ## Contributing
 
-Contributions are welcome! Please ensure:
-- Code follows TypeScript best practices
-- All tests pass
-- New features include tests
-- Documentation is updated
+Contributions welcome! Please:
 
-## License
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-MIT
+Requirements:
+- Follow TypeScript best practices
+- Add tests for new features
+- Update documentation
+- All tests must pass
 
 ## Support
 
-For issues, questions, or suggestions, please open an issue on GitHub.
+- **Issues**: [GitHub Issues](https://github.com/Pavelevich/tetsuonpmwallet/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Pavelevich/tetsuonpmwallet/discussions)
 
-## Changelog
+## License
 
-### Version 1.0.0
-- Initial release
-- Wallet generation and import
-- Transaction building and signing
-- Address validation and generation
-- RPC client for blockchain interaction
-- Comprehensive test suite
+MIT License - see LICENSE file for details
+
+## Disclaimer
+
+This software is provided "as is" without warranty. The authors are not responsible for lost funds or security breaches. Always test with small amounts first and follow security best practices.
+
+---
+
+**Made with ❤️ for the TETSUO blockchain community**
