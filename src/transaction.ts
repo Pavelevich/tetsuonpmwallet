@@ -112,7 +112,7 @@ export function createTransactionHex(
     hex += reverseTxid(input.txid);
 
     // Previous output index (4 bytes, little endian)
-    hex += input.vout.toString(16).padStart(8, '0');
+    hex += reverseBytesInPairs(input.vout.toString(16).padStart(8, '0'));
 
     // Script length and script
     // If scriptPubKeys provided (for signing), use them; otherwise empty
@@ -125,7 +125,7 @@ export function createTransactionHex(
     }
 
     // Sequence
-    hex += (input.sequence ?? 0xffffffff).toString(16).padStart(8, '0');
+    hex += reverseBytesInPairs((input.sequence ?? 0xffffffff).toString(16).padStart(8, '0'));
   }
 
   // Output count
@@ -217,7 +217,7 @@ export function signTransaction(
       for (let j = 0; j < inputs.length; j++) {
         const input = inputs[j];
         preimageHex += reverseTxid(input.txid);
-        preimageHex += input.vout.toString(16).padStart(8, '0');
+        preimageHex += reverseBytesInPairs(input.vout.toString(16).padStart(8, '0'));
 
         if (j === i) {
           // This is the input we're signing - use scriptPubKey
@@ -228,7 +228,7 @@ export function signTransaction(
           preimageHex += '00';
         }
 
-        preimageHex += (input.sequence ?? 0xffffffff).toString(16).padStart(8, '0');
+        preimageHex += reverseBytesInPairs((input.sequence ?? 0xffffffff).toString(16).padStart(8, '0'));
       }
 
       // Add outputs (from original unsigned tx)
@@ -264,9 +264,9 @@ export function signTransaction(
     for (let i = 0; i < inputs.length; i++) {
       const input = inputs[i];
       signedHex += reverseTxid(input.txid);
-      signedHex += input.vout.toString(16).padStart(8, '0');
+      signedHex += reverseBytesInPairs(input.vout.toString(16).padStart(8, '0'));
       signedHex += encodeVarInt(scriptSigs[i].length / 2) + scriptSigs[i];
-      signedHex += (input.sequence ?? 0xffffffff).toString(16).padStart(8, '0');
+      signedHex += reverseBytesInPairs((input.sequence ?? 0xffffffff).toString(16).padStart(8, '0'));
     }
 
     // Add outputs from original
