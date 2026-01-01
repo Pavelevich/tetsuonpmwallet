@@ -28,10 +28,33 @@ interface WalletStore {
   selectedWallet?: string;
 }
 
+interface Config {
+  rpcUrl: string;
+}
+
 // Constants
 const WALLET_DIR = path.join(process.env.HOME || '~', '.tetsuo');
 const WALLET_FILE = path.join(WALLET_DIR, 'wallets.json');
-const RPC_URL = process.env.TETSUO_RPC_URL || 'http://localhost:8080';
+const CONFIG_FILE = path.join(WALLET_DIR, 'config.json');
+let RPC_URL = process.env.TETSUO_RPC_URL || 'http://localhost:8080';
+
+// Load config from storage
+function loadConfig(): Config {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch {
+    // Fall back to defaults
+  }
+  return { rpcUrl: RPC_URL };
+}
+
+// Save config to storage
+function saveConfig(config: Config) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
 
 // Ensure wallet directory exists
 function initWalletStorage() {
@@ -41,6 +64,10 @@ function initWalletStorage() {
   if (!fs.existsSync(WALLET_FILE)) {
     fs.writeFileSync(WALLET_FILE, JSON.stringify({ wallets: [] }, null, 2));
   }
+
+  // Load config and update RPC_URL
+  const config = loadConfig();
+  RPC_URL = config.rpcUrl;
 }
 
 // Load wallets from storage
@@ -346,6 +373,24 @@ async function deleteWallet(rl: readline.Interface): Promise<void> {
   console.log(chalk.green('✓ Wallet deleted'));
 }
 
+async function configureRPC(rl: readline.Interface): Promise<void> {
+  const config = loadConfig();
+
+  console.log(chalk.cyan('\n⚙️  RPC Configuration:'));
+  console.log(`Current RPC URL: ${chalk.green(RPC_URL)}`);
+
+  const newUrl = await question(rl, 'Enter new RPC URL (or press Enter to keep current): ');
+
+  if (newUrl.trim()) {
+    RPC_URL = newUrl.trim();
+    saveConfig({ rpcUrl: RPC_URL });
+    console.log(chalk.green('✓ RPC URL updated!'));
+    console.log(`New URL: ${chalk.green(RPC_URL)}`);
+  } else {
+    console.log(chalk.yellow('No changes made'));
+  }
+}
+
 // Helper to get user input
 function question(rl: readline.Interface, prompt: string): Promise<string> {
   return new Promise(resolve => {
@@ -386,6 +431,7 @@ async function main() {
     console.log('/send             - Send tokens');
     console.log('/wallet-data      - View wallet details');
     console.log('/delete-wallet    - Delete wallet');
+    console.log('/config           - Configure RPC URL');
     console.log('/exit             - Exit CLI\n');
 
     const input = await question(rl, 'Command: ');
@@ -421,6 +467,9 @@ async function main() {
         break;
       case '/delete-wallet':
         await deleteWallet(rl);
+        break;
+      case '/config':
+        await configureRPC(rl);
         break;
       case '/exit':
         running = false;
