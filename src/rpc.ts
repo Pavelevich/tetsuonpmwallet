@@ -139,6 +139,8 @@ export class TetsuoRPC {
    */
   async signAndBroadcast(unsignedHex: string, privateKey: string): Promise<string> {
     try {
+      // The private key can be either hex or WIF format
+      // If it's hex (64 chars), send as-is - server will convert it
       const response = await this.client.post<any>('/api/wallet/sign-and-broadcast', {
         unsignedHex,
         privateKey
