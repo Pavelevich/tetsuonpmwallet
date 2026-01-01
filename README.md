@@ -40,7 +40,93 @@ A comprehensive TypeScript SDK for creating and managing TETSUO blockchain walle
 npm install tetsuo-blockchain-wallet
 ```
 
+## CLI Usage
+
+The package includes an interactive CLI tool for managing wallets:
+
+```bash
+tetsuo
+```
+
+### Available Commands
+
+```
+/create-wallet    - Create a new wallet with BIP39 mnemonic
+/import-wallet    - Import wallet from mnemonic or private key
+/list-wallets     - Display all stored wallets
+/select-wallet    - Select active wallet for operations
+/balance          - Check wallet balance
+/transactions     - View transaction history
+/receive          - Display receiving address
+/send             - Send TETSUO to another address
+/wallet-data      - View detailed wallet information
+/delete-wallet    - Delete a wallet
+/exit             - Exit the CLI
+```
+
+### Example CLI Workflow
+
+```bash
+# Start the CLI
+$ tetsuo
+
+# Create a new wallet
+Command: /create-wallet
+Wallet name: my-wallet
+⏳ Generating wallet...
+✓ Wallet created successfully!
+📝 Mnemonic (BACKUP THIS):
+word1 word2 word3 ... word12
+📍 Address:
+T1234567890abcdefghijklmnopqrstuvwxyz
+
+# Check balance
+Command: /balance
+⏳ Fetching balance...
+💰 Balance:
+5.50000000 TETSUO
+
+# View transactions
+Command: /transactions
+📋 Transaction History:
+─────────────────────────────────────────────────────────────────────────────
+↓ RECEIVE | 5.50 TETSUO | 2024-01-01T12:00:00Z
+↑ SEND   | 2.00 TETSUO | 2023-12-31T10:30:00Z
+─────────────────────────────────────────────────────────────────────────────
+
+# Show receive address
+Command: /receive
+📍 Receive Address:
+T1234567890abcdefghijklmnopqrstuvwxyz
+Share this address to receive TETSUO
+```
+
+### Environment Variables
+
+```bash
+# Set custom RPC endpoint (default: http://localhost:8080)
+export TETSUO_RPC_URL=http://your-rpc-server:8080
+tetsuo
+```
+
+### Wallet Storage
+
+Wallets are stored locally in:
+```
+~/.tetsuo/wallets.json
+```
+
+Each wallet stores:
+- Name
+- Address
+- Public Key
+- Private Key (encrypted recommended for production)
+- Mnemonic (if available)
+- Creation timestamp
+
 ## Quick Start
+
+### Programmatic API
 
 ### Generate a New Wallet
 

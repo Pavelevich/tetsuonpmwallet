@@ -4,8 +4,11 @@
   "description": "TypeScript SDK for TETSUO blockchain wallet operations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "tetsuo": "dist/cli.js"
+  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/cli.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -35,7 +38,9 @@
   "homepage": "https://github.com/Pavelevich/tetsuonpmwallet#readme",
   "dependencies": {
     "bip39": "^3.1.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "readline-sync": "^1.4.10",
+    "chalk": "^4.1.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
