@@ -36,7 +36,7 @@ interface Config {
 const WALLET_DIR = path.join(process.env.HOME || '~', '.tetsuo');
 const WALLET_FILE = path.join(WALLET_DIR, 'wallets.json');
 const CONFIG_FILE = path.join(WALLET_DIR, 'config.json');
-let RPC_URL = process.env.TETSUO_RPC_URL || 'http://localhost:8080';
+let RPC_URL = process.env.TETSUO_RPC_URL || 'https://tetsuoarena.com';
 
 // Load config from storage
 function loadConfig(): Config {
