@@ -37,7 +37,7 @@ A comprehensive TypeScript SDK for creating and managing TETSUO blockchain walle
 ## Installation
 
 ```bash
-npm install tetsuo-wallet-sdk
+npm install tetsuo-blockchain-wallet
 ```
 
 ## Quick Start
@@ -45,7 +45,7 @@ npm install tetsuo-wallet-sdk
 ### Generate a New Wallet
 
 ```typescript
-import { generateWallet } from 'tetsuo-wallet-sdk';
+import { generateWallet } from 'tetsuo-blockchain-wallet';
 
 const wallet = await generateWallet();
 
@@ -57,7 +57,7 @@ console.log('Private Key:', wallet.privateKey);
 ### Import Wallet from Mnemonic
 
 ```typescript
-import { importFromMnemonic } from 'tetsuo-wallet-sdk';
+import { importFromMnemonic } from 'tetsuo-blockchain-wallet';
 
 const mnemonic = 'word1 word2 word3 ... word12';
 const wallet = await importFromMnemonic(mnemonic);
@@ -68,7 +68,7 @@ console.log('Address:', wallet.address);
 ### Import Wallet from Private Key
 
 ```typescript
-import { importFromPrivateKey } from 'tetsuo-wallet-sdk';
+import { importFromPrivateKey } from 'tetsuo-blockchain-wallet';
 
 const privateKey = '0000000000000000000000000000000000000000000000000000000000000001';
 const wallet = importFromPrivateKey(privateKey);
@@ -79,7 +79,7 @@ console.log('Address:', wallet.address);
 ### Get Balance
 
 ```typescript
-import { createRPCClient } from 'tetsuo-wallet-sdk';
+import { createRPCClient } from 'tetsuo-blockchain-wallet';
 
 const rpc = createRPCClient('http://localhost:8080');
 const balance = await rpc.getBalance('TYourAddressHere');
@@ -95,7 +95,7 @@ import {
   createTransactionHex,
   signTransaction,
   createRPCClient
-} from 'tetsuo-wallet-sdk';
+} from 'tetsuo-blockchain-wallet';
 
 const rpc = createRPCClient('http://localhost:8080');
 
@@ -125,7 +125,7 @@ console.log('Transaction sent:', txid);
 ### Validate Address
 
 ```typescript
-import { isValidAddress, validateAddress } from 'tetsuo-wallet-sdk';
+import { isValidAddress, validateAddress } from 'tetsuo-blockchain-wallet';
 
 const address = 'TYourAddressHere';
 
@@ -306,7 +306,7 @@ import {
   InvalidAddressError,
   InsufficientFundsError,
   RPCError
-} from 'tetsuo-wallet-sdk';
+} from 'tetsuo-blockchain-wallet';
 
 try {
   // ... wallet operations
