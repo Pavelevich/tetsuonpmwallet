@@ -5,6 +5,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub](https://img.shields.io/badge/GitHub-tetsuonpmwallet-blue.svg)](https://github.com/Pavelevich/tetsuonpmwallet)
 
+```
+ ████████╗███████╗████████╗███████╗██╗   ██╗ ██████╗     ██╗    ██╗ █████╗ ██╗     ██╗     ███████╗████████╗
+ ╚══██╔══╝██╔════╝╚══██╔══╝██╔════╝██║   ██║██╔═══██╗    ██║    ██║██╔══██╗██║     ██║     ██╔════╝╚══██╔══╝
+    ██║   █████╗     ██║   ███████╗██║   ██║██║   ██║    ██║ █╗ ██║███████║██║     ██║     █████╗     ██║
+    ██║   ██╔══╝     ██║   ╚════██║██║   ██║██║   ██║    ██║███╗██║██╔══██║██║     ██║     ██╔══╝     ██║
+    ██║   ███████╗   ██║   ███████║╚██████╔╝╚██████╔╝    ╚███╔███╔╝██║  ██║███████╗███████╗███████╗   ██║
+    ╚═╝   ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝  ╚═════╝      ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝   ╚═╝
+```
+
+**Secure Blockchain Wallet • Client-Side Signing • Zero Trust Architecture**
+
 A **production-ready** TypeScript SDK for building and managing TETSUO blockchain wallets. Provides secure wallet generation, transaction signing, and blockchain interaction with client-side signing for maximum security.
 
 ## Table of Contents
