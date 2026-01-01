@@ -478,9 +478,15 @@ async function main() {
   });
 
   console.clear();
-  console.log(chalk.green.bold('\n  ▲ TETSUO WALLET\n'));
-  console.log(chalk.gray('  Client-side signing • Secure transactions\n'));
-  console.log(chalk.cyan('─'.repeat(57) + '\n'));
+  console.log(chalk.cyan.bold(`
+ ████████╗███████╗████████╗███████╗██╗   ██╗ ██████╗     ██╗    ██╗ █████╗ ██╗     ██╗     ███████╗████████╗
+ ╚══██╔══╝██╔════╝╚══██╔══╝██╔════╝██║   ██║██╔═══██╗    ██║    ██║██╔══██╗██║     ██║     ██╔════╝╚══██╔══╝
+    ██║   █████╗     ██║   ███████╗██║   ██║██║   ██║    ██║ █╗ ██║███████║██║     ██║     █████╗     ██║
+    ██║   ██╔══╝     ██║   ╚════██║██║   ██║██║   ██║    ██║███╗██║██╔══██║██║     ██║     ██╔══╝     ██║
+    ██║   ███████╗   ██║   ███████║╚██████╔╝╚██████╔╝    ╚███╔███╔╝██║  ██║███████╗███████╗███████╗   ██║
+    ╚═╝   ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝  ╚═════╝      ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝   ╚═╝
+  `));
+  console.log(chalk.gray('          Secure Blockchain Wallet • Client-Side Signing • Zero Trust Architecture\n'));
 
   let running = true;
 
