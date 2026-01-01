@@ -478,18 +478,9 @@ async function main() {
   });
 
   console.clear();
-  console.log(chalk.cyan.bold(`
-  TTTTTTTTT EEEEEEEE TTTTTTTT SSSSSSS  UUUU  UUUU OOOOOOO
-     TTT    EEEE        TTT    SSSS    UUUU  UUUU OOOOOOO
-     TTT    EEEEE       TTT     SSSSS  UUUU  UUUU  OOOOO
-     TTT    EEEE        TTT        SSS UUUU  UUUU OOOOOOO
-     TTT    EEEEEEEE    TTT    SSSSSSS  UUUUUUUU  OOOOOOO
-
-    WALLET : SECURE BLOCKCHAIN TRANSACTIONS
-  `));
-  console.log(chalk.cyan.bold('═══════════════════════════════'));
-  console.log(chalk.cyan.bold('    TETSUO BLOCKCHAIN WALLET'));
-  console.log(chalk.cyan.bold('═══════════════════════════════\n'));
+  console.log(chalk.green.bold('\n  ▲ TETSUO WALLET\n'));
+  console.log(chalk.gray('  Client-side signing • Secure transactions\n'));
+  console.log(chalk.cyan('─'.repeat(57) + '\n'));
 
   let running = true;
 
