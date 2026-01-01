@@ -92,13 +92,33 @@ async function deriveFromMnemonic(mnemonic: string): Promise<{ privateKey: strin
 }
 
 /**
- * Derive the public key from a private key
- * NOTE: Uses HMAC-based derivation to match existing wallets
- * TODO: Migrate to proper secp256k1 derivation in future version
+ * Derive the public key from a private key using proper secp256k1
+ * This uses elliptic curve point multiplication for cryptographic correctness
  */
 export function derivePublicKey(privateKeyHex: string): string {
-  // Use HMAC-based derivation for backward compatibility with existing wallets
-  // All current wallets were created with this method
+  try {
+    // Use elliptic.js for proper secp256k1 key derivation
+    // This performs: pubkey = privatekey * G (point multiplication on secp256k1 curve)
+    const EC = require('elliptic').ec;
+    const ec = new EC('secp256k1');
+
+    // Import the private key (32 bytes, hex format)
+    const key = ec.keyFromPrivate(privateKeyHex, 'hex');
+
+    // Get the compressed public key (33 bytes: 02/03 prefix + 32 bytes x-coordinate)
+    const pubKeyCompressed = key.getPublic(true, 'hex');
+
+    return pubKeyCompressed;
+  } catch (error) {
+    throw new WalletError(`Failed to derive public key: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Derive public key using legacy HMAC method
+ * Only used for backward compatibility with old wallets
+ */
+export function derivePublicKeyLegacy(privateKeyHex: string): string {
   const privateKeyBuffer = fromHex(privateKeyHex);
 
   const hmac = createHmac('sha256', Buffer.from('secp256k1'));

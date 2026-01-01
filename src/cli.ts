@@ -250,8 +250,12 @@ async function getBalance(): Promise<void> {
     const rpc = createRPCClient(RPC_URL);
     const balance = await rpc.getBalance(wallet.address);
 
-    console.log(chalk.cyan('\n💰 Balance:'));
-    console.log(chalk.green(`${balance.toFixed(8)} TETSUO`));
+    console.log(chalk.cyan('\n💰 Balance Information:'));
+    console.log('─'.repeat(50));
+    console.log(chalk.yellow('  Wallet:  ') + chalk.white(wallet.name));
+    console.log(chalk.yellow('  Address: ') + chalk.white(wallet.address));
+    console.log(chalk.yellow('  Balance: ') + chalk.green(`${balance.toFixed(8)} TETSUO`));
+    console.log('─'.repeat(50));
   } catch (error: any) {
     console.log(chalk.red(`✗ Error: ${error.message}`));
   }
@@ -272,11 +276,14 @@ async function getTransactions(): Promise<void> {
     const transactions = await rpc.getTransactionHistory(wallet.address);
 
     if (transactions.length === 0) {
+      console.log(chalk.cyan('\n📋 Transaction History:'));
+      console.log(chalk.yellow('  Wallet: ') + wallet.name);
       console.log(chalk.yellow('No transactions found'));
       return;
     }
 
     console.log(chalk.cyan('\n📋 Transaction History:'));
+    console.log(chalk.yellow('  Wallet: ') + wallet.name);
     console.log('─'.repeat(80));
 
     transactions.forEach((tx: any) => {

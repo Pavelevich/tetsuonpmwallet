@@ -6,6 +6,8 @@ import { createHmac } from 'crypto';
 import { doubleSha256, toHex, fromHex } from './crypto';
 import { validateAddress, addressToHash160 } from './address';
 import { SignedTransaction, TransactionInput, TransactionOutput, UTXO, InsufficientFundsError, WalletError } from './types';
+import { derivePublicKey, derivePublicKeyLegacy } from './wallet';
+import { hash160 } from './crypto';
 
 const COIN_VALUE = 100_000_000; // 1 TETSUO = 100M satoshis
 const MIN_FEE = 25000; // Minimum fee in satoshis
@@ -63,7 +65,7 @@ export function buildTransaction(
   const inputs: TransactionInput[] = selectedUTXOs.map(utxo => ({
     txid: utxo.txid,
     vout: utxo.vout,
-    sequence: 0xfffffffe
+    sequence: 0xffffffff
   }));
 
   // Build outputs
@@ -123,7 +125,7 @@ export function createTransactionHex(
     }
 
     // Sequence
-    hex += (input.sequence ?? 0xfffffffe).toString(16).padStart(8, '0');
+    hex += (input.sequence ?? 0xffffffff).toString(16).padStart(8, '0');
   }
 
   // Output count
@@ -161,11 +163,38 @@ export function signTransaction(
     const EC = require('elliptic').ec;
     const ec = new EC('secp256k1');
 
-    // Import the correct key derivation from wallet module
-    const { derivePublicKey } = require('./index');
+    // Auto-detect wallet type (HMAC vs secp256k1) by comparing hash160 with scriptPubKey
+    let pubKeyCompressed = '';
+    let derivationMethod = 'secp256k1';
 
-    // Get the correct public key for this private key
-    const pubKeyCompressed = derivePublicKey(privateKey);
+    // First try secp256k1 (new wallets)
+    pubKeyCompressed = derivePublicKey(privateKey);
+
+    // If we have UTXOs with P2PKH scripts, detect which derivation method to use
+    if (utxos && utxos.length > 0 && utxos[0].scriptPubKey) {
+      const scriptPubKey = utxos[0].scriptPubKey;
+
+      // For P2PKH scripts: 76a914 + 20bytes + 88ac
+      if (scriptPubKey.startsWith('76a914') && scriptPubKey.length === 50) {
+        const hashFromScript = scriptPubKey.slice(6, 46); // Extract hash160 from script
+
+        // Check secp256k1
+        const hash160Secp = hash160(fromHex(pubKeyCompressed)).toString('hex');
+        if (hash160Secp === hashFromScript) {
+          derivationMethod = 'secp256k1';
+        } else {
+          // Try legacy HMAC derivation
+          const pubKeyLegacy = derivePublicKeyLegacy(privateKey);
+          const hash160Hmac = hash160(fromHex(pubKeyLegacy)).toString('hex');
+          if (hash160Hmac === hashFromScript) {
+            pubKeyCompressed = pubKeyLegacy;
+            derivationMethod = 'hmac';
+          }
+          // else: keep secp256k1 as fallback (shouldn't happen for valid wallets)
+        }
+      }
+    }
+
     const pubKeyBuffer = fromHex(pubKeyCompressed);
 
     // Store all scriptSigs
@@ -199,12 +228,15 @@ export function signTransaction(
           preimageHex += '00';
         }
 
-        preimageHex += (input.sequence ?? 0xfffffffe).toString(16).padStart(8, '0');
+        preimageHex += (input.sequence ?? 0xffffffff).toString(16).padStart(8, '0');
       }
 
       // Add outputs (from original unsigned tx)
       const outputPos = findOutputsPositionInHex(transactionHex, inputs.length);
       preimageHex += transactionHex.slice(outputPos);
+
+      // Add SIGHASH_ALL to preimage (TETSUO specific - must be part of what's hashed)
+      preimageHex += '01000000'; // SIGHASH_ALL in little-endian
 
       // Sign preimage
       const preimageBuffer = fromHex(preimageHex);
@@ -216,7 +248,7 @@ export function signTransaction(
       let rHex = signature.r.toString(16).padStart(64, '0');
       let sHex = signature.s.toString(16).padStart(64, '0');
 
-      const derSig = encodeDERSignature(rHex, sHex) + '01'; // 01 = SIGHASH_ALL
+      const derSig = encodeDERSignature(rHex, sHex) + '01'; // 01 = SIGHASH_ALL (part of scriptSig format)
 
       // Create scriptSig: <sig> <pubkey>
       const scriptSig = encodeVarInt(derSig.length / 2) + derSig +
@@ -234,7 +266,7 @@ export function signTransaction(
       signedHex += reverseTxid(input.txid);
       signedHex += input.vout.toString(16).padStart(8, '0');
       signedHex += encodeVarInt(scriptSigs[i].length / 2) + scriptSigs[i];
-      signedHex += (input.sequence ?? 0xfffffffe).toString(16).padStart(8, '0');
+      signedHex += (input.sequence ?? 0xffffffff).toString(16).padStart(8, '0');
     }
 
     // Add outputs from original

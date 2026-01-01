@@ -71,7 +71,19 @@ export class TetsuoRPC {
   async getUTXOs(address: string): Promise<UTXO[]> {
     try {
       const response = await this.client.get<any>(`/api/wallet/utxos/${address}`);
-      return Array.isArray(response.data.utxos) ? response.data.utxos : [];
+
+      // Map server response to UTXO type (server uses 'amount', SDK expects 'value')
+      if (Array.isArray(response.data.utxos)) {
+        return response.data.utxos.map((utxo: any) => ({
+          txid: utxo.txid,
+          vout: utxo.vout,
+          value: utxo.amount ? Math.floor(utxo.amount * 100_000_000) : 0, // Convert TETSUO to satoshis
+          confirmations: utxo.confirmations || 0,
+          scriptPubKey: utxo.scriptPubKey
+        }));
+      }
+
+      return [];
     } catch (error) {
       throw this.handleError(`Failed to get UTXOs for ${address}`, error);
     }

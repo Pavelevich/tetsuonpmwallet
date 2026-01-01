@@ -51,6 +51,7 @@ export {
   importFromMnemonic,
   importFromPrivateKey,
   derivePublicKey,
+  derivePublicKeyLegacy,
   isValidMnemonic,
   getSupportedMnemonicLengths
 } from './wallet';
