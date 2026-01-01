@@ -1,0 +1,51 @@
+{
+  "name": "tetsuo-wallet-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for TETSUO blockchain wallet operations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build && npm run test",
+    "clean": "rm -rf dist coverage"
+  },
+  "keywords": [
+    "tetsuo",
+    "wallet",
+    "blockchain",
+    "crypto",
+    "secp256k1",
+    "bip39",
+    "typescript",
+    "sdk"
+  ],
+  "author": "TETSUO Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TETSUO/tetsuo-wallet-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TETSUO/tetsuo-wallet-sdk/issues"
+  },
+  "homepage": "https://github.com/TETSUO/tetsuo-wallet-sdk#readme",
+  "dependencies": {
+    "bip39": "^3.1.0",
+    "bip32": "^4.0.1",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
