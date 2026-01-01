@@ -64,10 +64,11 @@ export interface Balance {
 export interface Transaction {
   txid: string;
   amount: number;
-  type: 'send' | 'receive';
+  isIncoming: boolean;
   confirmations: number;
   timestamp: number;
-  address?: string;
+  address: string;
+  fee?: number;
 }
 
 export interface BlockchainInfo {

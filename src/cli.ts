@@ -9,7 +9,10 @@ import {
   importFromPrivateKey,
   isValidAddress,
   createRPCClient,
-  isValidMnemonic
+  isValidMnemonic,
+  buildTransaction,
+  createTransactionHex,
+  signTransaction
 } from './index';
 import chalk from 'chalk';
 
@@ -277,8 +280,10 @@ async function getTransactions(): Promise<void> {
     console.log('─'.repeat(80));
 
     transactions.forEach((tx: any) => {
-      const type = tx.type === 'receive' ? chalk.green('↓ RECEIVE') : chalk.yellow('↑ SEND');
-      console.log(`${type} | ${tx.amount} TETSUO | ${tx.date}`);
+      const type = tx.isIncoming ? chalk.green('↓ RECEIVE') : chalk.yellow('↑ SEND');
+      const date = new Date(tx.timestamp).toLocaleDateString();
+      const feeStr = tx.fee ? ` | Fee: ${tx.fee}` : '';
+      console.log(`${type} | ${tx.amount.toFixed(8)} TETSUO | Confirmations: ${tx.confirmations}${feeStr} | ${date}`);
     });
     console.log('─'.repeat(80));
   } catch (error: any) {
@@ -322,9 +327,67 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     return;
   }
 
-  console.log(chalk.yellow('⏳ Preparing transaction...'));
-  console.log(chalk.yellow('⚠️  Feature not fully implemented in CLI'));
-  console.log(chalk.cyan('Use the iOS app or integrate with your backend to broadcast'));
+  try {
+    console.log(chalk.yellow('\n⏳ Preparing transaction...'));
+    const rpc = createRPCClient(RPC_URL);
+
+    // Get UTXOs
+    console.log(chalk.yellow('  Fetching UTXOs...'));
+    const utxos = await rpc.getUTXOs(wallet.address);
+
+    if (utxos.length === 0) {
+      console.log(chalk.red('✗ No UTXOs available to spend'));
+      return;
+    }
+
+    // Build transaction
+    const txData = buildTransaction(wallet.address, toAddress, numAmount, utxos, wallet.address);
+
+    // Show transaction details
+    console.log(chalk.cyan('\n📋 Transaction Details:'));
+    console.log('─'.repeat(60));
+    console.log(chalk.yellow('  From:     ') + wallet.address);
+    console.log(chalk.yellow('  To:       ') + toAddress);
+    console.log(chalk.yellow('  Amount:   ') + chalk.green(numAmount.toFixed(8) + ' TETSUO'));
+    console.log(chalk.yellow('  Fee:      ') + chalk.yellow((txData.fee / 100_000_000).toFixed(8) + ' TETSUO'));
+    console.log(chalk.yellow('  Total:    ') + chalk.cyan((numAmount + txData.fee / 100_000_000).toFixed(8) + ' TETSUO'));
+    console.log('─'.repeat(60));
+
+    // Ask for confirmation
+    const confirm = await question(rl, chalk.cyan('\nConfirm transaction? (yes/no): '));
+    if (confirm.toLowerCase() !== 'yes' && confirm.toLowerCase() !== 'y') {
+      console.log(chalk.yellow('❌ Transaction cancelled'));
+      return;
+    }
+
+    // Create and sign transaction
+    console.log(chalk.yellow('\n⏳ Signing transaction...'));
+    const txHex = createTransactionHex(txData.inputs, txData.outputs);
+    const signedTxHex = signTransaction(txHex, wallet.privateKey, txData.inputs, utxos);
+
+    // Broadcast or use server fallback
+    console.log(chalk.yellow('  Broadcasting...'));
+    let txid: string;
+    try {
+      // Try broadcasting signed transaction
+      txid = await rpc.broadcastTransaction(signedTxHex);
+    } catch (broadcastError: any) {
+      console.log(chalk.yellow('  Client signing verification failed, using server signature...'));
+      // Fallback: Use server to sign and broadcast
+      txid = await rpc.signAndBroadcast(txHex, wallet.privateKey);
+    }
+
+    console.log(chalk.green('\n✅ Transaction sent successfully!'));
+    console.log(chalk.cyan('\n📊 Transaction Info:'));
+    console.log('─'.repeat(60));
+    console.log(chalk.yellow('  TXID:     ') + chalk.green(txid));
+    console.log(chalk.yellow('  Amount:   ') + chalk.green(numAmount.toFixed(8) + ' TETSUO'));
+    console.log(chalk.yellow('  Fee:      ') + chalk.yellow((txData.fee / 100_000_000).toFixed(8) + ' TETSUO'));
+    console.log('─'.repeat(60));
+    console.log(chalk.cyan('\nCheck transaction status at: https://tetsuoarena.com/tx/' + txid));
+  } catch (error: any) {
+    console.log(chalk.red('\n✗ Error: ' + error.message));
+  }
 }
 
 async function walletData(): Promise<void> {

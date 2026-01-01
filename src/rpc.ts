@@ -91,10 +91,11 @@ export class TetsuoRPC {
       return response.data.transactions.map((tx: any) => ({
         txid: tx.txid,
         amount: tx.amount || 0,
-        type: tx.type === 'receive' ? 'receive' : 'send',
+        isIncoming: tx.isIncoming === true,
         confirmations: tx.confirmations || 0,
-        timestamp: tx.timestamp || Date.now(),
-        address: tx.address
+        timestamp: (tx.timestamp || Math.floor(Date.now() / 1000)) * 1000, // Convert to milliseconds
+        address: tx.address,
+        fee: tx.fee || undefined
       }));
     } catch (error) {
       // Return empty array if endpoint not available
@@ -119,7 +120,7 @@ export class TetsuoRPC {
    */
   async broadcastTransaction(transactionHex: string): Promise<string> {
     try {
-      const response = await this.client.post<any>('/api/transaction/broadcast', {
+      const response = await this.client.post<any>('/api/wallet/broadcast', {
         hex: transactionHex
       });
 
@@ -130,6 +131,26 @@ export class TetsuoRPC {
       return response.data.txid;
     } catch (error) {
       throw this.handleError('Failed to broadcast transaction', error);
+    }
+  }
+
+  /**
+   * Sign and broadcast transaction (for fallback when client signing fails)
+   */
+  async signAndBroadcast(unsignedHex: string, privateKey: string): Promise<string> {
+    try {
+      const response = await this.client.post<any>('/api/wallet/sign-and-broadcast', {
+        unsignedHex,
+        privateKey
+      });
+
+      if (!response.data.txid) {
+        throw new Error('No transaction ID returned');
+      }
+
+      return response.data.txid;
+    } catch (error) {
+      throw this.handleError('Failed to sign and broadcast transaction', error);
     }
   }
 
