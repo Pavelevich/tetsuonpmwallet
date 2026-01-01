@@ -41,7 +41,7 @@ describe('Wallet', () => {
     expect(isValidMnemonic('invalid mnemonic phrase')).toBe(false);
   });
 
-  it('should import wallet from private key', () => {
+  it('should import wallet from private key', async () => {
     const generated = await generateWallet();
     const imported = importFromPrivateKey(generated.privateKey);
 
