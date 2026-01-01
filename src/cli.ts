@@ -92,18 +92,18 @@ function saveWallets(store: WalletStore) {
 async function createWallet(rl: readline.Interface): Promise<void> {
   const name = await question(rl, 'Wallet name: ');
   if (!name.trim()) {
-    console.log(chalk.red('✗ Wallet name cannot be empty'));
+    console.log(chalk.red('[ERROR] Wallet name cannot be empty'));
     return;
   }
 
   try {
-    console.log(chalk.yellow('⏳ Generating wallet...'));
+    console.log(chalk.yellow('[...] Generating wallet...'));
     const wallet = await generateWallet();
 
     const store = loadWallets();
     const exists = store.wallets.some(w => w.name === name);
     if (exists) {
-      console.log(chalk.red('✗ Wallet with this name already exists'));
+      console.log(chalk.red('[ERROR] Wallet with this name already exists'));
       return;
     }
 
@@ -122,13 +122,13 @@ async function createWallet(rl: readline.Interface): Promise<void> {
 
     saveWallets(store);
 
-    console.log(chalk.green('✓ Wallet created successfully!'));
-    console.log(chalk.cyan('\n📝 Mnemonic (BACKUP THIS):'));
+    console.log(chalk.green('[OK] Wallet created successfully!'));
+    console.log(chalk.cyan('\n[NOTE] Mnemonic (BACKUP THIS):'));
     console.log(chalk.yellow(wallet.mnemonic));
-    console.log(chalk.cyan('\n📍 Address:'));
+    console.log(chalk.cyan('\n[ADDR] Address:'));
     console.log(chalk.yellow(wallet.address));
   } catch (error: any) {
-    console.log(chalk.red(`✗ Error: ${error.message}`));
+    console.log(chalk.red(`[ERROR] Error: ${error.message}`));
   }
 }
 
@@ -137,7 +137,7 @@ async function importWallet(rl: readline.Interface): Promise<void> {
   const type = await question(rl, 'Import from (mnemonic/privatekey): ');
 
   if (!name.trim()) {
-    console.log(chalk.red('✗ Wallet name cannot be empty'));
+    console.log(chalk.red('[ERROR] Wallet name cannot be empty'));
     return;
   }
 
@@ -147,24 +147,24 @@ async function importWallet(rl: readline.Interface): Promise<void> {
     if (type.toLowerCase() === 'mnemonic') {
       const mnemonic = await question(rl, 'Enter mnemonic (12 words): ');
       if (!isValidMnemonic(mnemonic)) {
-        console.log(chalk.red('✗ Invalid mnemonic'));
+        console.log(chalk.red('[ERROR] Invalid mnemonic'));
         return;
       }
-      console.log(chalk.yellow('⏳ Importing wallet...'));
+      console.log(chalk.yellow('[...] Importing wallet...'));
       wallet = await importFromMnemonic(mnemonic);
     } else if (type.toLowerCase() === 'privatekey') {
       const privateKey = await question(rl, 'Enter private key (hex): ');
-      console.log(chalk.yellow('⏳ Importing wallet...'));
+      console.log(chalk.yellow('[...] Importing wallet...'));
       wallet = importFromPrivateKey(privateKey);
     } else {
-      console.log(chalk.red('✗ Invalid import type'));
+      console.log(chalk.red('[ERROR] Invalid import type'));
       return;
     }
 
     const store = loadWallets();
     const exists = store.wallets.some(w => w.name === name);
     if (exists) {
-      console.log(chalk.red('✗ Wallet with this name already exists'));
+      console.log(chalk.red('[ERROR] Wallet with this name already exists'));
       return;
     }
 
@@ -182,11 +182,11 @@ async function importWallet(rl: readline.Interface): Promise<void> {
     }
 
     saveWallets(store);
-    console.log(chalk.green('✓ Wallet imported successfully!'));
-    console.log(chalk.cyan('📍 Address:'));
+    console.log(chalk.green('[OK] Wallet imported successfully!'));
+    console.log(chalk.cyan('[ADDR] Address:'));
     console.log(chalk.yellow(wallet.address));
   } catch (error: any) {
-    console.log(chalk.red(`✗ Error: ${error.message}`));
+    console.log(chalk.red(`[ERROR] Error: ${error.message}`));
   }
 }
 
@@ -198,11 +198,11 @@ async function listWallets(): Promise<void> {
     return;
   }
 
-  console.log(chalk.cyan('\n📊 Your Wallets:'));
+  console.log(chalk.cyan('\n[INFO] Your Wallets:'));
   console.log('─'.repeat(80));
 
   store.wallets.forEach((wallet, index) => {
-    const selected = store.selectedWallet === wallet.name ? ' ✓' : '';
+    const selected = store.selectedWallet === wallet.name ? ' [SELECTED]' : '';
     const created = new Date(wallet.createdAt).toLocaleDateString();
     console.log(
       `${index + 1}. ${chalk.bold(wallet.name)}${selected}`
@@ -230,9 +230,9 @@ async function selectWallet(rl: readline.Interface): Promise<void> {
   if (index >= 0 && index < store.wallets.length) {
     store.selectedWallet = store.wallets[index].name;
     saveWallets(store);
-    console.log(chalk.green(`✓ Selected: ${store.wallets[index].name}`));
+    console.log(chalk.green(`[OK] Selected: ${store.wallets[index].name}`));
   } else {
-    console.log(chalk.red('✗ Invalid selection'));
+    console.log(chalk.red('[ERROR] Invalid selection'));
   }
 }
 
@@ -241,23 +241,23 @@ async function getBalance(): Promise<void> {
   const wallet = store.wallets.find(w => w.name === store.selectedWallet);
 
   if (!wallet) {
-    console.log(chalk.red('✗ No wallet selected'));
+    console.log(chalk.red('[ERROR] No wallet selected'));
     return;
   }
 
   try {
-    console.log(chalk.yellow('⏳ Fetching balance...'));
+    console.log(chalk.yellow('[...] Fetching balance...'));
     const rpc = createRPCClient(RPC_URL);
     const balance = await rpc.getBalance(wallet.address);
 
-    console.log(chalk.cyan('\n💰 Balance Information:'));
+    console.log(chalk.cyan('\n[BALANCE] Balance Information:'));
     console.log('─'.repeat(50));
     console.log(chalk.yellow('  Wallet:  ') + chalk.white(wallet.name));
     console.log(chalk.yellow('  Address: ') + chalk.white(wallet.address));
     console.log(chalk.yellow('  Balance: ') + chalk.green(`${balance.toFixed(8)} TETSUO`));
     console.log('─'.repeat(50));
   } catch (error: any) {
-    console.log(chalk.red(`✗ Error: ${error.message}`));
+    console.log(chalk.red(`[ERROR] Error: ${error.message}`));
   }
 }
 
@@ -266,23 +266,23 @@ async function getTransactions(): Promise<void> {
   const wallet = store.wallets.find(w => w.name === store.selectedWallet);
 
   if (!wallet) {
-    console.log(chalk.red('✗ No wallet selected'));
+    console.log(chalk.red('[ERROR] No wallet selected'));
     return;
   }
 
   try {
-    console.log(chalk.yellow('⏳ Fetching transactions...'));
+    console.log(chalk.yellow('[...] Fetching transactions...'));
     const rpc = createRPCClient(RPC_URL);
     const transactions = await rpc.getTransactionHistory(wallet.address);
 
     if (transactions.length === 0) {
-      console.log(chalk.cyan('\n📋 Transaction History:'));
+      console.log(chalk.cyan('\n[HISTORY] Transaction History:'));
       console.log(chalk.yellow('  Wallet: ') + wallet.name);
       console.log(chalk.yellow('No transactions found'));
       return;
     }
 
-    console.log(chalk.cyan('\n📋 Transaction History:'));
+    console.log(chalk.cyan('\n[HISTORY] Transaction History:'));
     console.log(chalk.yellow('  Wallet: ') + wallet.name);
     console.log('─'.repeat(80));
 
@@ -294,7 +294,7 @@ async function getTransactions(): Promise<void> {
     });
     console.log('─'.repeat(80));
   } catch (error: any) {
-    console.log(chalk.red(`✗ Error: ${error.message}`));
+    console.log(chalk.red(`[ERROR] Error: ${error.message}`));
   }
 }
 
@@ -303,11 +303,11 @@ async function receiveTokens(): Promise<void> {
   const wallet = store.wallets.find(w => w.name === store.selectedWallet);
 
   if (!wallet) {
-    console.log(chalk.red('✗ No wallet selected'));
+    console.log(chalk.red('[ERROR] No wallet selected'));
     return;
   }
 
-  console.log(chalk.cyan('\n📍 Receive Address:'));
+  console.log(chalk.cyan('\n[ADDR] Receive Address:'));
   console.log(chalk.green(wallet.address));
   console.log(chalk.yellow('\nShare this address to receive TETSUO'));
 }
@@ -317,25 +317,25 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
   const wallet = store.wallets.find(w => w.name === store.selectedWallet);
 
   if (!wallet) {
-    console.log(chalk.red('✗ No wallet selected'));
+    console.log(chalk.red('[ERROR] No wallet selected'));
     return;
   }
 
   const toAddress = await question(rl, 'Recipient address: ');
   if (!isValidAddress(toAddress)) {
-    console.log(chalk.red('✗ Invalid recipient address'));
+    console.log(chalk.red('[ERROR] Invalid recipient address'));
     return;
   }
 
   const amount = await question(rl, 'Amount (TETSUO): ');
   const numAmount = parseFloat(amount);
   if (isNaN(numAmount) || numAmount <= 0) {
-    console.log(chalk.red('✗ Invalid amount'));
+    console.log(chalk.red('[ERROR] Invalid amount'));
     return;
   }
 
   try {
-    console.log(chalk.yellow('\n⏳ Preparing transaction...'));
+    console.log(chalk.yellow('\n[...] Preparing transaction...'));
     const rpc = createRPCClient(RPC_URL);
 
     // Get UTXOs
@@ -343,7 +343,7 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     const utxos = await rpc.getUTXOs(wallet.address);
 
     if (utxos.length === 0) {
-      console.log(chalk.red('✗ No UTXOs available to spend'));
+      console.log(chalk.red('[ERROR] No UTXOs available to spend'));
       return;
     }
 
@@ -351,7 +351,7 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     const txData = buildTransaction(wallet.address, toAddress, numAmount, utxos, wallet.address);
 
     // Show transaction details
-    console.log(chalk.cyan('\n📋 Transaction Details:'));
+    console.log(chalk.cyan('\n[HISTORY] Transaction Details:'));
     console.log('─'.repeat(60));
     console.log(chalk.yellow('  From:     ') + wallet.address);
     console.log(chalk.yellow('  To:       ') + toAddress);
@@ -363,12 +363,12 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     // Ask for confirmation
     const confirm = await question(rl, chalk.cyan('\nConfirm transaction? (yes/no): '));
     if (confirm.toLowerCase() !== 'yes' && confirm.toLowerCase() !== 'y') {
-      console.log(chalk.yellow('❌ Transaction cancelled'));
+      console.log(chalk.yellow('[CANCEL] Transaction cancelled'));
       return;
     }
 
     // Create and sign transaction
-    console.log(chalk.yellow('\n⏳ Signing transaction...'));
+    console.log(chalk.yellow('\n[...] Signing transaction...'));
     const txHex = createTransactionHex(txData.inputs, txData.outputs);
     const signedTxHex = signTransaction(txHex, wallet.privateKey, txData.inputs, utxos);
 
@@ -384,8 +384,8 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
       txid = await rpc.signAndBroadcast(txHex, wallet.privateKey);
     }
 
-    console.log(chalk.green('\n✅ Transaction sent successfully!'));
-    console.log(chalk.cyan('\n📊 Transaction Info:'));
+    console.log(chalk.green('\n[OK] Transaction sent successfully!'));
+    console.log(chalk.cyan('\n[INFO] Transaction Info:'));
     console.log('─'.repeat(60));
     console.log(chalk.yellow('  TXID:     ') + chalk.green(txid));
     console.log(chalk.yellow('  Amount:   ') + chalk.green(numAmount.toFixed(8) + ' TETSUO'));
@@ -393,7 +393,7 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     console.log('─'.repeat(60));
     console.log(chalk.cyan('\nCheck transaction status at: https://tetsuoarena.com/tx/' + txid));
   } catch (error: any) {
-    console.log(chalk.red('\n✗ Error: ' + error.message));
+    console.log(chalk.red('\n[ERROR] Error: ' + error.message));
   }
 }
 
@@ -402,11 +402,11 @@ async function walletData(): Promise<void> {
   const wallet = store.wallets.find(w => w.name === store.selectedWallet);
 
   if (!wallet) {
-    console.log(chalk.red('✗ No wallet selected'));
+    console.log(chalk.red('[ERROR] No wallet selected'));
     return;
   }
 
-  console.log(chalk.cyan('\n📊 Wallet Data:'));
+  console.log(chalk.cyan('\n[INFO] Wallet Data:'));
   console.log('─'.repeat(80));
   console.log(`Name:       ${chalk.yellow(wallet.name)}`);
   console.log(`Address:    ${chalk.green(wallet.address)}`);
@@ -424,7 +424,7 @@ async function deleteWallet(rl: readline.Interface): Promise<void> {
   const wallet = store.wallets.find(w => w.name === store.selectedWallet);
 
   if (!wallet) {
-    console.log(chalk.red('✗ No wallet selected'));
+    console.log(chalk.red('[ERROR] No wallet selected'));
     return;
   }
 
@@ -440,13 +440,13 @@ async function deleteWallet(rl: readline.Interface): Promise<void> {
   }
 
   saveWallets(store);
-  console.log(chalk.green('✓ Wallet deleted'));
+  console.log(chalk.green('[OK] Wallet deleted'));
 }
 
 async function configureRPC(rl: readline.Interface): Promise<void> {
   const config = loadConfig();
 
-  console.log(chalk.cyan('\n⚙️  RPC Configuration:'));
+  console.log(chalk.cyan('\n[CONFIG]  RPC Configuration:'));
   console.log(`Current RPC URL: ${chalk.green(RPC_URL)}`);
 
   const newUrl = await question(rl, 'Enter new RPC URL (or press Enter to keep current): ');
@@ -454,7 +454,7 @@ async function configureRPC(rl: readline.Interface): Promise<void> {
   if (newUrl.trim()) {
     RPC_URL = newUrl.trim();
     saveConfig({ rpcUrl: RPC_URL });
-    console.log(chalk.green('✓ RPC URL updated!'));
+    console.log(chalk.green('[OK] RPC URL updated!'));
     console.log(`New URL: ${chalk.green(RPC_URL)}`);
   } else {
     console.log(chalk.yellow('No changes made'));
@@ -478,9 +478,18 @@ async function main() {
   });
 
   console.clear();
-  console.log(chalk.green.bold('\n═══════════════════════════════'));
-  console.log(chalk.green.bold('   TETSUO Wallet CLI'));
-  console.log(chalk.green.bold('═══════════════════════════════\n'));
+  console.log(chalk.cyan.bold(`
+  TTTTTTTTT EEEEEEEE TTTTTTTT SSSSSSS  UUUU  UUUU OOOOOOO
+     TTT    EEEE        TTT    SSSS    UUUU  UUUU OOOOOOO
+     TTT    EEEEE       TTT     SSSSS  UUUU  UUUU  OOOOO
+     TTT    EEEE        TTT        SSS UUUU  UUUU OOOOOOO
+     TTT    EEEEEEEE    TTT    SSSSSSS  UUUUUUUU  OOOOOOO
+
+    WALLET : SECURE BLOCKCHAIN TRANSACTIONS
+  `));
+  console.log(chalk.cyan.bold('═══════════════════════════════'));
+  console.log(chalk.cyan.bold('    TETSUO BLOCKCHAIN WALLET'));
+  console.log(chalk.cyan.bold('═══════════════════════════════\n'));
 
   let running = true;
 
@@ -543,10 +552,10 @@ async function main() {
         break;
       case '/exit':
         running = false;
-        console.log(chalk.green('\nGoodbye! 👋\n'));
+        console.log(chalk.green('\nGoodbye! [BYE]\n'));
         break;
       default:
-        console.log(chalk.red('✗ Unknown command'));
+        console.log(chalk.red('[ERROR] Unknown command'));
     }
   }
 
