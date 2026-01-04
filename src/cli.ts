@@ -41,6 +41,18 @@ const WALLET_FILE = path.join(WALLET_DIR, 'wallets.json');
 const CONFIG_FILE = path.join(WALLET_DIR, 'config.json');
 let RPC_URL = process.env.TETSUO_RPC_URL || 'https://tetsuoarena.com';
 
+// Format amount in standard crypto format (removes trailing zeros, adds thousand separators)
+function formatAmount(value: number): string {
+  if (value === 0) return '0';
+  let formatted = value.toFixed(8);
+  // Remove trailing zeros after decimal
+  formatted = formatted.replace(/\.?0+$/, '');
+  // Add thousand separators
+  const parts = formatted.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.length > 1 ? parts.join('.') : parts[0];
+}
+
 // Load config from storage
 function loadConfig(): Config {
   try {
@@ -254,7 +266,7 @@ async function getBalance(): Promise<void> {
     console.log('─'.repeat(50));
     console.log(chalk.yellow('  Wallet:  ') + chalk.white(wallet.name));
     console.log(chalk.yellow('  Address: ') + chalk.white(wallet.address));
-    console.log(chalk.yellow('  Balance: ') + chalk.green(`${balance.toFixed(8)} TETSUO`));
+    console.log(chalk.yellow('  Balance: ') + chalk.green(`${formatAmount(balance)} TETSUO`));
     console.log('─'.repeat(50));
   } catch (error: any) {
     console.log(chalk.red(`[ERROR] Error: ${error.message}`));
@@ -290,7 +302,7 @@ async function getTransactions(): Promise<void> {
       const type = tx.isIncoming ? chalk.green('↓ RECEIVE') : chalk.yellow('↑ SEND');
       const date = new Date(tx.timestamp).toLocaleDateString();
       const feeStr = tx.fee ? ` | Fee: ${tx.fee}` : '';
-      console.log(`${type} | ${tx.amount.toFixed(8)} TETSUO | Confirmations: ${tx.confirmations}${feeStr} | ${date}`);
+      console.log(`${type} | ${formatAmount(tx.amount)} TETSUO | Confirmations: ${tx.confirmations}${feeStr} | ${date}`);
     });
     console.log('─'.repeat(80));
   } catch (error: any) {
@@ -355,9 +367,9 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     console.log('─'.repeat(60));
     console.log(chalk.yellow('  From:     ') + wallet.address);
     console.log(chalk.yellow('  To:       ') + toAddress);
-    console.log(chalk.yellow('  Amount:   ') + chalk.green(numAmount.toFixed(8) + ' TETSUO'));
-    console.log(chalk.yellow('  Fee:      ') + chalk.yellow((txData.fee / 100_000_000).toFixed(8) + ' TETSUO'));
-    console.log(chalk.yellow('  Total:    ') + chalk.cyan((numAmount + txData.fee / 100_000_000).toFixed(8) + ' TETSUO'));
+    console.log(chalk.yellow('  Amount:   ') + chalk.green(formatAmount(numAmount) + ' TETSUO'));
+    console.log(chalk.yellow('  Fee:      ') + chalk.yellow(formatAmount(txData.fee / 100_000_000) + ' TETSUO'));
+    console.log(chalk.yellow('  Total:    ') + chalk.cyan(formatAmount(numAmount + txData.fee / 100_000_000) + ' TETSUO'));
     console.log('─'.repeat(60));
 
     // Ask for confirmation
@@ -380,8 +392,8 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     console.log(chalk.cyan('\n[INFO] Transaction Info:'));
     console.log('─'.repeat(60));
     console.log(chalk.yellow('  TXID:     ') + chalk.green(txid));
-    console.log(chalk.yellow('  Amount:   ') + chalk.green(numAmount.toFixed(8) + ' TETSUO'));
-    console.log(chalk.yellow('  Fee:      ') + chalk.yellow((txData.fee / 100_000_000).toFixed(8) + ' TETSUO'));
+    console.log(chalk.yellow('  Amount:   ') + chalk.green(formatAmount(numAmount) + ' TETSUO'));
+    console.log(chalk.yellow('  Fee:      ') + chalk.yellow(formatAmount(txData.fee / 100_000_000) + ' TETSUO'));
     console.log('─'.repeat(60));
     console.log(chalk.cyan('\nCheck transaction status at: https://tetsuoarena.com/tx/' + txid));
   } catch (error: any) {
