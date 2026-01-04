@@ -69,7 +69,7 @@ export {
 export { TetsuoRPC, createRPCClient } from './rpc';
 
 // Version
-export const VERSION = '1.3.2';
+export const VERSION = '1.3.3';
 
 // Package info
 export const PACKAGE_INFO = {

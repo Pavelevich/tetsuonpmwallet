@@ -148,17 +148,22 @@ export class TetsuoRPC {
 
   /**
    * Estimate fee for transaction
+   * Returns fee in satoshis, with safe fallback
    */
   async estimateFee(inputCount: number, outputCount: number): Promise<number> {
+    const SAFE_MIN_FEE = 150000; // 0.0015 TETSUO - safe fallback
+
     try {
       const response = await this.client.get<any>('/api/fee/estimate', {
         params: { inputCount, outputCount }
       });
 
-      return response.data.fee || 25000;
+      const fee = response.data.fee || SAFE_MIN_FEE;
+      // Always return at least the safe minimum
+      return Math.max(fee, SAFE_MIN_FEE);
     } catch (error) {
-      // Return default fee if endpoint fails
-      return 25000;
+      // Return safe fallback if endpoint fails
+      return SAFE_MIN_FEE;
     }
   }
 
