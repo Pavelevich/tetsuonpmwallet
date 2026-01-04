@@ -173,7 +173,7 @@ $ /balance
 ──────────────────────────────────────────────────
   Wallet:  my-wallet
   Address: TAbcdefghijklmnopqrstuvwxyz1234567890
-  Balance: 10.50000000 TETSUO
+  Balance: 10.5 TETSUO
 ──────────────────────────────────────────────────
 
 $ /send
@@ -185,9 +185,9 @@ Amount (TETSUO): 5
 ────────────────────────────────────────────────────────────
   From:     TAbcdefghijklmnopqrstuvwxyz1234567890
   To:       T1111111111111111111111111111111111111111
-  Amount:   5.00000000 TETSUO
-  Fee:      0.00025000 TETSUO
-  Total:    5.00025000 TETSUO
+  Amount:   5 TETSUO
+  Fee:      0.00025 TETSUO
+  Total:    5.00025 TETSUO
 ────────────────────────────────────────────────────────────
 
 Confirm transaction? (yes/no): yes
@@ -491,7 +491,17 @@ Remove compiled files and coverage reports.
 
 ## Recent Updates
 
-### Version 1.2.4 ✨
+### Version 1.2.6 ✨
+- **Security fix**: Removed server-side signing fallback - private keys now never leave your device
+- **Amount formatting**: Standard crypto format (removes trailing zeros, adds thousand separators)
+  - Before: `25.00000000 TETSUO`
+  - After: `25 TETSUO` or `10,000 TETSUO`
+- 100% client-side signing enforced
+
+### Version 1.2.5
+- Minor bug fixes and improvements
+
+### Version 1.2.4
 - **Fixed critical endianness bug** in transaction encoding (vout, sequence fields)
 - **Removed emojis** from CLI for professional interface
 - **Added ASCII art header** to wallet CLI
