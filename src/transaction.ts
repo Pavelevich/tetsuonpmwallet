@@ -10,8 +10,8 @@ import { derivePublicKey, derivePublicKeyLegacy } from './wallet';
 import { hash160 } from './crypto';
 
 const COIN_VALUE = 100_000_000; // 1 TETSUO = 100M satoshis
-const MIN_FEE = 25000; // Minimum fee in satoshis
-const FEE_PER_BYTE = 100; // Satoshis per byte
+const MIN_FEE = 100000; // Minimum fee in satoshis (0.001 TETSUO)
+const FEE_PER_BYTE = 150; // Satoshis per byte
 
 /**
  * Build an unsigned transaction
