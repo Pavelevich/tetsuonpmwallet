@@ -154,6 +154,7 @@ tetsuo
 | `/config` | Configure RPC endpoint |
 | `/set-password` | Enable wallet encryption |
 | `/change-password` | Change encryption password |
+| `/price` | Show TETSUO price (Solana) |
 | `/exit` | Quit the CLI |
 
 ### Example Workflow
@@ -505,7 +506,12 @@ Remove compiled files and coverage reports.
 
 ## Recent Updates
 
-### Version 1.3.0 ✨ (Security Release)
+### Version 1.3.1
+- **Live Price Display**: Shows TETSUO/SOL price from dexscreener on startup
+- **New /price command**: Check TETSUO price anytime
+- Price includes 24h change, volume, and liquidity
+
+### Version 1.3.0 (Security Release)
 - **AES-256-GCM Encryption**: Wallet file encrypted at rest with password protection
 - **Password Protection**: Required password to access wallet (min 8 characters)
 - **PBKDF2 Key Derivation**: 100,000 iterations for brute-force resistance

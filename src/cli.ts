@@ -16,6 +16,10 @@ import {
   signTransaction
 } from './index';
 import chalk from 'chalk';
+import axios from 'axios';
+
+// Dexscreener API for TETSUO price
+const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/pairs/solana/2KB3i5uLKhUcjUwq3poxHpuGGqBWYwtTk5eG9E5WnLG6';
 
 // Encryption constants
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
@@ -48,6 +52,37 @@ const WALLET_DIR = path.join(process.env.HOME || '~', '.tetsuo');
 const WALLET_FILE = path.join(WALLET_DIR, 'wallets.json');
 const CONFIG_FILE = path.join(WALLET_DIR, 'config.json');
 let RPC_URL = process.env.TETSUO_RPC_URL || 'https://tetsuoarena.com';
+
+// Fetch TETSUO price from Solana dexscreener
+async function fetchTetsuoPrice(): Promise<void> {
+  try {
+    const response = await axios.get(DEXSCREENER_API, { timeout: 5000 });
+    const pair = response.data?.pair;
+
+    if (pair) {
+      const price = parseFloat(pair.priceUsd || 0);
+      const change24h = parseFloat(pair.priceChange?.h24 || 0);
+      const volume24h = parseFloat(pair.volume?.h24 || 0);
+      const liquidity = parseFloat(pair.liquidity?.usd || 0);
+
+      const changeColor = change24h >= 0 ? chalk.green : chalk.red;
+      const changeSign = change24h >= 0 ? '+' : '';
+
+      console.log(chalk.cyan('─'.repeat(60)));
+      console.log(chalk.cyan.bold('  TETSUO/SOL (Solana) - Live Price'));
+      console.log(chalk.cyan('─'.repeat(60)));
+      console.log(chalk.yellow('  Price:      ') + chalk.white(`$${price.toFixed(6)}`));
+      console.log(chalk.yellow('  24h Change: ') + changeColor(`${changeSign}${change24h.toFixed(2)}%`));
+      console.log(chalk.yellow('  24h Volume: ') + chalk.white(`$${formatAmount(volume24h)}`));
+      console.log(chalk.yellow('  Liquidity:  ') + chalk.white(`$${formatAmount(liquidity)}`));
+      console.log(chalk.gray('  Source: dexscreener.com/solana/tetsuo'));
+      console.log(chalk.cyan('─'.repeat(60)));
+    }
+  } catch (error) {
+    // Silently fail - price display is optional
+    console.log(chalk.gray('  [Price data unavailable]'));
+  }
+}
 
 // Format amount in standard crypto format (removes trailing zeros, adds thousand separators)
 function formatAmount(value: number): string {
@@ -769,6 +804,10 @@ async function main() {
   `));
   console.log(chalk.gray('          Secure Blockchain Wallet • Client-Side Signing • AES-256 Encrypted\n'));
 
+  // Show live TETSUO price from Solana
+  await fetchTetsuoPrice();
+  console.log('');
+
   // Handle wallet encryption
   if (isWalletEncrypted()) {
     // Wallet is encrypted, need to unlock
@@ -818,6 +857,7 @@ async function main() {
     console.log('/config           - Configure RPC URL');
     console.log('/set-password     - Enable wallet encryption');
     console.log('/change-password  - Change encryption password');
+    console.log('/price            - Show TETSUO price (Solana)');
     console.log('/exit             - Exit CLI\n');
 
     const input = await question(rl, 'Command: ');
@@ -866,6 +906,9 @@ async function main() {
         break;
       case '/change-password':
         await changePassword(rl);
+        break;
+      case '/price':
+        await fetchTetsuoPrice();
         break;
       case '/exit':
         running = false;
