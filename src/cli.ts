@@ -372,17 +372,9 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
     const txHex = createTransactionHex(txData.inputs, txData.outputs);
     const signedTxHex = signTransaction(txHex, wallet.privateKey, txData.inputs, utxos);
 
-    // Broadcast or use server fallback
+    // Broadcast signed transaction (client-side only - private key never leaves device)
     console.log(chalk.yellow('  Broadcasting...'));
-    let txid: string;
-    try {
-      // Try broadcasting signed transaction
-      txid = await rpc.broadcastTransaction(signedTxHex);
-    } catch (broadcastError: any) {
-      console.log(chalk.yellow('  Client signing verification failed, using server signature...'));
-      // Fallback: Use server to sign and broadcast
-      txid = await rpc.signAndBroadcast(txHex, wallet.privateKey);
-    }
+    const txid = await rpc.broadcastTransaction(signedTxHex);
 
     console.log(chalk.green('\n[OK] Transaction sent successfully!'));
     console.log(chalk.cyan('\n[INFO] Transaction Info:'));
