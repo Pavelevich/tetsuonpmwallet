@@ -152,6 +152,8 @@ tetsuo
 | `/wallet-data` | View detailed wallet information |
 | `/delete-wallet` | Remove wallet from storage |
 | `/config` | Configure RPC endpoint |
+| `/set-password` | Enable wallet encryption |
+| `/change-password` | Change encryption password |
 | `/exit` | Quit the CLI |
 
 ### Example Workflow
@@ -326,25 +328,31 @@ Health check for RPC endpoint.
 
 ## Security
 
-### 🔒 Critical Security Guidelines
+### 🔒 Production-Grade Security
 
-**Private Keys**
-- Never expose private keys
-- Never share mnemonics
-- Back up mnemonics offline only
-- Consider using hardware wallets for large amounts
-
-**Network Security**
-- Always use HTTPS for RPC endpoints in production
-- Verify RPC endpoint authenticity
-- Use verified blockchain explorers
-- Never paste private keys into unsecured apps
+**Wallet Encryption (v1.3.0+)**
+- AES-256-GCM encryption for wallet file at rest
+- PBKDF2 key derivation (100,000 iterations)
+- Password required to unlock wallet
+- Passwords cleared from memory on exit
 
 **Client-Side Signing**
-- This SDK signs transactions **on your device only**
-- Private keys never leave your computer
-- Broadcast-only servers can't steal funds
-- Always verify transaction details before confirming
+- 100% client-side transaction signing
+- Private keys NEVER leave your device
+- No server-side signing fallback
+- Broadcast-only network communication
+
+**Input Validation**
+- Address format validation
+- Amount range validation (0 < amount <= 21M)
+- Wallet name sanitization
+- Private key format validation
+
+**Cryptographic Standards**
+- secp256k1 elliptic curve (same as Bitcoin)
+- BIP39 mnemonic generation
+- SHA256, RIPEMD160, Base58Check
+- ECDSA DER signature encoding
 
 **Best Practices**
 ```typescript
@@ -359,6 +367,12 @@ console.log(wallet.privateKey); // DON'T DO THIS
 
 // ✗ BAD: Never send to unverified addresses
 const address = userInput; // Verify first!
+```
+
+**New Security Commands**
+```
+/set-password     - Enable wallet encryption
+/change-password  - Change encryption password
 ```
 
 ## Examples
@@ -491,29 +505,31 @@ Remove compiled files and coverage reports.
 
 ## Recent Updates
 
-### Version 1.2.6 ✨
-- **Security fix**: Removed server-side signing fallback - private keys now never leave your device
-- **Amount formatting**: Standard crypto format (removes trailing zeros, adds thousand separators)
-  - Before: `25.00000000 TETSUO`
-  - After: `25 TETSUO` or `10,000 TETSUO`
-- 100% client-side signing enforced
+### Version 1.3.0 ✨ (Security Release)
+- **AES-256-GCM Encryption**: Wallet file encrypted at rest with password protection
+- **Password Protection**: Required password to access wallet (min 8 characters)
+- **PBKDF2 Key Derivation**: 100,000 iterations for brute-force resistance
+- **Memory Security**: Passwords cleared from memory on exit
+- **Input Validation**: Strict validation for addresses, amounts, wallet names
+- **Zero Vulnerabilities**: Removed unused dependencies with CVEs
+- **100% Client-Side**: Private keys never leave your device
+
+### Version 1.2.6
+- **Security fix**: Removed server-side signing fallback
+- **Amount formatting**: Standard crypto format (no trailing zeros, thousand separators)
 
 ### Version 1.2.5
 - Minor bug fixes and improvements
 
 ### Version 1.2.4
-- **Fixed critical endianness bug** in transaction encoding (vout, sequence fields)
-- **Removed emojis** from CLI for professional interface
-- **Added ASCII art header** to wallet CLI
-- Improved terminal output clarity
+- Fixed critical endianness bug in transaction encoding
+- Professional CLI interface
 
 ### Version 1.2.3
 - Client-side signing fully functional
-- TETSUO-specific transaction format fixes (sequence 0xffffffff, SIGHASH_ALL)
 
 ### Version 1.2.2
 - Secp256k1 key derivation improvements
-- Legacy HMAC wallet support (deprecated)
 
 ## Contributing
 

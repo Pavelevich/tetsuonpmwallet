@@ -3,6 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
+import * as crypto from 'crypto';
 import {
   generateWallet,
   importFromMnemonic,
@@ -15,6 +16,13 @@ import {
   signTransaction
 } from './index';
 import chalk from 'chalk';
+
+// Encryption constants
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const PBKDF2_ITERATIONS = 100000;
+const SALT_LENGTH = 32;
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
 
 // Types
 interface StoredWallet {
@@ -53,6 +61,70 @@ function formatAmount(value: number): string {
   return parts.length > 1 ? parts.join('.') : parts[0];
 }
 
+// Derive encryption key from password using PBKDF2
+function deriveKey(password: string, salt: Buffer): Buffer {
+  return crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 32, 'sha256');
+}
+
+// Encrypt data with AES-256-GCM
+function encryptData(data: string, password: string): string {
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const key = deriveKey(password, salt);
+
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
+  let encrypted = cipher.update(data, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+
+  // Format: salt:iv:authTag:encryptedData (all hex)
+  return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+}
+
+// Decrypt data with AES-256-GCM
+function decryptData(encryptedData: string, password: string): string {
+  const parts = encryptedData.split(':');
+  if (parts.length !== 4) {
+    throw new Error('Invalid encrypted data format');
+  }
+
+  const salt = Buffer.from(parts[0], 'hex');
+  const iv = Buffer.from(parts[1], 'hex');
+  const authTag = Buffer.from(parts[2], 'hex');
+  const encrypted = parts[3];
+
+  const key = deriveKey(password, salt);
+
+  const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+
+  return decrypted;
+}
+
+// Check if wallet file is encrypted
+function isWalletEncrypted(): boolean {
+  if (!fs.existsSync(WALLET_FILE)) return false;
+  const data = fs.readFileSync(WALLET_FILE, 'utf-8');
+  // Encrypted format has colons separating salt:iv:authTag:data
+  return data.includes(':') && !data.startsWith('{');
+}
+
+// Session password (cleared on exit)
+let sessionPassword: string | null = null;
+
+// Securely clear password from memory
+function clearPassword(): void {
+  if (sessionPassword) {
+    // Overwrite with random data before clearing
+    const len = sessionPassword.length;
+    sessionPassword = crypto.randomBytes(len).toString('hex').slice(0, len);
+    sessionPassword = null;
+  }
+}
+
 // Load config from storage
 function loadConfig(): Config {
   try {
@@ -85,26 +157,61 @@ function initWalletStorage() {
   RPC_URL = config.rpcUrl;
 }
 
-// Load wallets from storage
+// Load wallets from storage (with decryption)
 function loadWallets(): WalletStore {
   try {
+    if (!fs.existsSync(WALLET_FILE)) {
+      return { wallets: [] };
+    }
+
     const data = fs.readFileSync(WALLET_FILE, 'utf-8');
+
+    // Check if encrypted
+    if (isWalletEncrypted()) {
+      if (!sessionPassword) {
+        throw new Error('Wallet is locked. Please unlock first.');
+      }
+      const decrypted = decryptData(data, sessionPassword);
+      return JSON.parse(decrypted);
+    }
+
     return JSON.parse(data);
-  } catch {
-    return { wallets: [] };
+  } catch (error: any) {
+    if (error.message.includes('Unsupported state') || error.message.includes('bad decrypt')) {
+      throw new Error('Invalid password');
+    }
+    throw error;
   }
 }
 
-// Save wallets to storage
+// Save wallets to storage (with encryption)
 function saveWallets(store: WalletStore) {
-  fs.writeFileSync(WALLET_FILE, JSON.stringify(store, null, 2));
+  const data = JSON.stringify(store, null, 2);
+
+  if (sessionPassword) {
+    const encrypted = encryptData(data, sessionPassword);
+    fs.writeFileSync(WALLET_FILE, encrypted);
+  } else {
+    fs.writeFileSync(WALLET_FILE, data);
+  }
 }
 
 // CLI Commands
 async function createWallet(rl: readline.Interface): Promise<void> {
   const name = await question(rl, 'Wallet name: ');
-  if (!name.trim()) {
+  const trimmedName = name.trim();
+
+  // Validate wallet name
+  if (!trimmedName) {
     console.log(chalk.red('[ERROR] Wallet name cannot be empty'));
+    return;
+  }
+  if (trimmedName.length > 50) {
+    console.log(chalk.red('[ERROR] Wallet name too long (max 50 characters)'));
+    return;
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) {
+    console.log(chalk.red('[ERROR] Wallet name can only contain letters, numbers, underscores, and hyphens'));
     return;
   }
 
@@ -113,14 +220,14 @@ async function createWallet(rl: readline.Interface): Promise<void> {
     const wallet = await generateWallet();
 
     const store = loadWallets();
-    const exists = store.wallets.some(w => w.name === name);
+    const exists = store.wallets.some(w => w.name === trimmedName);
     if (exists) {
       console.log(chalk.red('[ERROR] Wallet with this name already exists'));
       return;
     }
 
     store.wallets.push({
-      name,
+      name: trimmedName,
       address: wallet.address,
       privateKey: wallet.privateKey,
       publicKey: wallet.publicKey,
@@ -129,7 +236,7 @@ async function createWallet(rl: readline.Interface): Promise<void> {
     });
 
     if (!store.selectedWallet) {
-      store.selectedWallet = name;
+      store.selectedWallet = trimmedName;
     }
 
     saveWallets(store);
@@ -146,12 +253,23 @@ async function createWallet(rl: readline.Interface): Promise<void> {
 
 async function importWallet(rl: readline.Interface): Promise<void> {
   const name = await question(rl, 'Wallet name: ');
-  const type = await question(rl, 'Import from (mnemonic/privatekey): ');
+  const trimmedName = name.trim();
 
-  if (!name.trim()) {
+  // Validate wallet name
+  if (!trimmedName) {
     console.log(chalk.red('[ERROR] Wallet name cannot be empty'));
     return;
   }
+  if (trimmedName.length > 50) {
+    console.log(chalk.red('[ERROR] Wallet name too long (max 50 characters)'));
+    return;
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) {
+    console.log(chalk.red('[ERROR] Wallet name can only contain letters, numbers, underscores, and hyphens'));
+    return;
+  }
+
+  const type = await question(rl, 'Import from (mnemonic/privatekey): ');
 
   try {
     let wallet;
@@ -166,22 +284,27 @@ async function importWallet(rl: readline.Interface): Promise<void> {
       wallet = await importFromMnemonic(mnemonic);
     } else if (type.toLowerCase() === 'privatekey') {
       const privateKey = await question(rl, 'Enter private key (hex): ');
+      // Validate private key format
+      if (!/^[a-fA-F0-9]{64}$/.test(privateKey)) {
+        console.log(chalk.red('[ERROR] Invalid private key - must be 64 hex characters'));
+        return;
+      }
       console.log(chalk.yellow('[...] Importing wallet...'));
       wallet = importFromPrivateKey(privateKey);
     } else {
-      console.log(chalk.red('[ERROR] Invalid import type'));
+      console.log(chalk.red('[ERROR] Invalid import type. Use "mnemonic" or "privatekey"'));
       return;
     }
 
     const store = loadWallets();
-    const exists = store.wallets.some(w => w.name === name);
+    const exists = store.wallets.some(w => w.name === trimmedName);
     if (exists) {
       console.log(chalk.red('[ERROR] Wallet with this name already exists'));
       return;
     }
 
     store.wallets.push({
-      name,
+      name: trimmedName,
       address: wallet.address,
       privateKey: wallet.privateKey,
       publicKey: wallet.publicKey,
@@ -190,7 +313,7 @@ async function importWallet(rl: readline.Interface): Promise<void> {
     });
 
     if (!store.selectedWallet) {
-      store.selectedWallet = name;
+      store.selectedWallet = trimmedName;
     }
 
     saveWallets(store);
@@ -341,8 +464,29 @@ async function sendTokens(rl: readline.Interface): Promise<void> {
 
   const amount = await question(rl, 'Amount (TETSUO): ');
   const numAmount = parseFloat(amount);
-  if (isNaN(numAmount) || numAmount <= 0) {
-    console.log(chalk.red('[ERROR] Invalid amount'));
+
+  // Validate amount
+  if (isNaN(numAmount)) {
+    console.log(chalk.red('[ERROR] Invalid amount - must be a number'));
+    return;
+  }
+  if (numAmount <= 0) {
+    console.log(chalk.red('[ERROR] Amount must be greater than 0'));
+    return;
+  }
+  if (numAmount > 21_000_000) {
+    console.log(chalk.red('[ERROR] Amount exceeds maximum (21,000,000 TETSUO)'));
+    return;
+  }
+  // Check for too many decimal places (max 8)
+  const decimalPlaces = (amount.split('.')[1] || '').length;
+  if (decimalPlaces > 8) {
+    console.log(chalk.red('[ERROR] Maximum 8 decimal places allowed'));
+    return;
+  }
+  // Prevent sending to self
+  if (toAddress === wallet.address) {
+    console.log(chalk.red('[ERROR] Cannot send to yourself'));
     return;
   }
 
@@ -472,6 +616,132 @@ function question(rl: readline.Interface, prompt: string): Promise<string> {
   });
 }
 
+// Helper for hidden password input
+function questionPassword(rl: readline.Interface, prompt: string): Promise<string> {
+  return new Promise(resolve => {
+    const stdin = process.stdin;
+    const stdout = process.stdout;
+
+    stdout.write(chalk.cyan(prompt));
+
+    const password: string[] = [];
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+
+    const onData = (char: string) => {
+      if (char === '\n' || char === '\r') {
+        stdin.setRawMode(false);
+        stdin.removeListener('data', onData);
+        stdout.write('\n');
+        resolve(password.join(''));
+      } else if (char === '\u0003') {
+        // Ctrl+C
+        process.exit();
+      } else if (char === '\u007F' || char === '\b') {
+        // Backspace
+        if (password.length > 0) {
+          password.pop();
+          stdout.write('\b \b');
+        }
+      } else {
+        password.push(char);
+        stdout.write('*');
+      }
+    };
+
+    stdin.on('data', onData);
+  });
+}
+
+// Setup password for wallet encryption
+async function setupPassword(rl: readline.Interface): Promise<boolean> {
+  console.log(chalk.cyan('\n[SECURITY] Set up wallet encryption password'));
+  console.log(chalk.yellow('This password protects your private keys. Do not forget it!'));
+  console.log(chalk.yellow('Minimum 8 characters required.\n'));
+
+  const password = await questionPassword(rl, 'Enter new password: ');
+
+  if (password.length < 8) {
+    console.log(chalk.red('[ERROR] Password must be at least 8 characters'));
+    return false;
+  }
+
+  const confirm = await questionPassword(rl, 'Confirm password: ');
+
+  if (password !== confirm) {
+    console.log(chalk.red('[ERROR] Passwords do not match'));
+    return false;
+  }
+
+  sessionPassword = password;
+
+  // Re-save wallets with encryption
+  const store = loadWallets();
+  saveWallets(store);
+
+  console.log(chalk.green('\n[OK] Wallet encryption enabled!'));
+  return true;
+}
+
+// Unlock wallet with password
+async function unlockWallet(rl: readline.Interface): Promise<boolean> {
+  console.log(chalk.cyan('\n[LOCKED] Wallet is encrypted'));
+
+  for (let attempts = 0; attempts < 3; attempts++) {
+    const password = await questionPassword(rl, 'Enter password: ');
+
+    try {
+      sessionPassword = password;
+      loadWallets(); // Test if password works
+      console.log(chalk.green('[OK] Wallet unlocked!\n'));
+      return true;
+    } catch (error: any) {
+      sessionPassword = null;
+      console.log(chalk.red(`[ERROR] ${error.message}. Attempts remaining: ${2 - attempts}`));
+    }
+  }
+
+  console.log(chalk.red('\n[ERROR] Too many failed attempts. Exiting.'));
+  return false;
+}
+
+// Change wallet password
+async function changePassword(rl: readline.Interface): Promise<void> {
+  if (!sessionPassword) {
+    console.log(chalk.red('[ERROR] Wallet not encrypted or not unlocked'));
+    return;
+  }
+
+  const currentPassword = await questionPassword(rl, 'Enter current password: ');
+
+  if (currentPassword !== sessionPassword) {
+    console.log(chalk.red('[ERROR] Current password is incorrect'));
+    return;
+  }
+
+  const newPassword = await questionPassword(rl, 'Enter new password: ');
+
+  if (newPassword.length < 8) {
+    console.log(chalk.red('[ERROR] Password must be at least 8 characters'));
+    return;
+  }
+
+  const confirm = await questionPassword(rl, 'Confirm new password: ');
+
+  if (newPassword !== confirm) {
+    console.log(chalk.red('[ERROR] Passwords do not match'));
+    return;
+  }
+
+  // Load with old password, save with new
+  const store = loadWallets();
+  sessionPassword = newPassword;
+  saveWallets(store);
+
+  console.log(chalk.green('[OK] Password changed successfully!'));
+}
+
 // Main CLI Loop
 async function main() {
   initWalletStorage();
@@ -479,6 +749,13 @@ async function main() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
+  });
+
+  // Handle Ctrl+C gracefully
+  process.on('SIGINT', () => {
+    clearPassword();
+    console.log(chalk.green('\n\nGoodbye! [BYE]\n'));
+    process.exit(0);
   });
 
   console.clear();
@@ -490,7 +767,34 @@ async function main() {
     ██║   ███████╗   ██║   ███████║╚██████╔╝╚██████╔╝    ╚███╔███╔╝██║  ██║███████╗███████╗███████╗   ██║
     ╚═╝   ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝  ╚═════╝      ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝   ╚═╝
   `));
-  console.log(chalk.gray('          Secure Blockchain Wallet • Client-Side Signing • Zero Trust Architecture\n'));
+  console.log(chalk.gray('          Secure Blockchain Wallet • Client-Side Signing • AES-256 Encrypted\n'));
+
+  // Handle wallet encryption
+  if (isWalletEncrypted()) {
+    // Wallet is encrypted, need to unlock
+    const unlocked = await unlockWallet(rl);
+    if (!unlocked) {
+      rl.close();
+      process.exit(1);
+    }
+  } else {
+    // Check if there are existing wallets that need encryption
+    try {
+      const store = JSON.parse(fs.readFileSync(WALLET_FILE, 'utf-8'));
+      if (store.wallets && store.wallets.length > 0) {
+        console.log(chalk.yellow('[WARNING] Your wallet is not encrypted!'));
+        const encrypt = await question(rl, 'Would you like to set up encryption now? (yes/no): ');
+        if (encrypt.toLowerCase() === 'yes' || encrypt.toLowerCase() === 'y') {
+          const success = await setupPassword(rl);
+          if (!success) {
+            console.log(chalk.yellow('Continuing without encryption...'));
+          }
+        }
+      }
+    } catch {
+      // No wallets yet, that's fine
+    }
+  }
 
   let running = true;
 
@@ -512,6 +816,8 @@ async function main() {
     console.log('/wallet-data      - View wallet details');
     console.log('/delete-wallet    - Delete wallet');
     console.log('/config           - Configure RPC URL');
+    console.log('/set-password     - Enable wallet encryption');
+    console.log('/change-password  - Change encryption password');
     console.log('/exit             - Exit CLI\n');
 
     const input = await question(rl, 'Command: ');
@@ -551,8 +857,19 @@ async function main() {
       case '/config':
         await configureRPC(rl);
         break;
+      case '/set-password':
+        if (sessionPassword) {
+          console.log(chalk.yellow('Wallet is already encrypted. Use /change-password to change it.'));
+        } else {
+          await setupPassword(rl);
+        }
+        break;
+      case '/change-password':
+        await changePassword(rl);
+        break;
       case '/exit':
         running = false;
+        clearPassword();
         console.log(chalk.green('\nGoodbye! [BYE]\n'));
         break;
       default:
@@ -560,6 +877,7 @@ async function main() {
     }
   }
 
+  clearPassword();
   rl.close();
   process.exit(0);
 }
